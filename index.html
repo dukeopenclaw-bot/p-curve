@@ -1,211 +1,182 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<title>TCC Tool</title>
+<title>TCC Tool v1.0</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
 
 <style>
 :root {
-  --bg: #ffffff;
-  --text: #000000;
-  --grid: #cccccc;
-  --card: #f5f5f5;
+  --bg:#fff; --text:#000; --grid:#ccc; --card:#f5f5f5;
 }
-
 [data-theme="dark"] {
-  --bg: #111;
-  --text: #eee;
-  --grid: #444;
-  --card: #1a1a1a;
+  --bg:#111; --text:#eee; --grid:#444; --card:#1a1a1a;
 }
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: Arial;
-  margin: 20px;
-}
+body { background:var(--bg); color:var(--text); font-family:Arial; margin:20px;}
+.section { background:var(--card); padding:10px; margin-bottom:15px; border-radius:8px;}
+input,select { padding:5px; margin:3px;}
+button { padding:5px 10px; cursor:pointer;}
+canvas { background:var(--bg); }
 
-.section {
-  background: var(--card);
-  padding: 10px;
-  margin-bottom: 15px;
-  border-radius: 8px;
-}
-
-input {
-  padding: 6px;
-  margin: 4px;
-}
-
-button {
-  padding: 6px 10px;
-  cursor: pointer;
-}
-
-canvas {
-  background: var(--bg);
-  border-radius: 8px;
+.version {
+  font-size:12px;
+  opacity:0.7;
 }
 </style>
 </head>
 <body>
 
 <h1>⚡ TCC Tool</h1>
+<div class="version">Version 1.0.0</div>
+<button onclick="toggleTheme()">🌙 Theme</button>
 
-<button onclick="toggleTheme()">🌙 Toggle Theme</button>
-
+<!-- GRAPH -->
 <div class="section">
-  <input id="graphId" placeholder="GraphID (G1)">
-  <button onclick="loadGraph()">Load Graph</button>
+  <h3>📊 Graph</h3>
+  <input id="graphId" placeholder="GraphID">
+  <button onclick="loadGraph()">Load</button>
 </div>
 
 <canvas id="chart" width="1000" height="600"></canvas>
 
+<!-- COORDINATION -->
+<div class="section">
+  <h3>⚙️ Coordination Check</h3>
+  <input id="relayA" placeholder="Relay A">
+  <input id="relayB" placeholder="Relay B">
+  <button onclick="checkCoord()">Check</button>
+  <div id="coordResult"></div>
+</div>
+
+<!-- RELAY LIST -->
+<div class="section">
+  <h3>📋 Relays</h3>
+  <button onclick="loadRelays()">Load Relays</button>
+  <div id="relayList"></div>
+</div>
+
+<!-- ADD RELAY -->
+<div class="section">
+  <h3>➕ Add Relay</h3>
+  <input id="r_tag" placeholder="RelayTag">
+  <input id="r_model" placeholder="ModelID">
+  <button onclick="addRelay()">Add</button>
+</div>
+
 <script>
-const SCRIPT_URL = "YOUR_SCRIPT_URL";
-
+const SCRIPT_URL="YOUR_SCRIPT_URL";
 let chart;
-let isDark = false;
 
-/*************** THEME ***************/
-function toggleTheme() {
-  isDark = !isDark;
-  document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
-  if (chart) chart.update();
+/******** THEME ********/
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute("data-theme");
+  document.documentElement.setAttribute("data-theme",cur==="dark"?"light":"dark");
 }
 
-/*************** COLOR ***************/
-function getColor(i) {
-  const colors = [
-    "#ff4d4d","#4da6ff","#4dff88",
-    "#ffd24d","#cc66ff","#00e6e6"
-  ];
-  return colors[i % colors.length];
+/******** GRAPH ********/
+function loadGraph(){
+  fetch(`${SCRIPT_URL}?type=graphFull&graphId=${graphId.value}`)
+  .then(r=>r.json())
+  .then(res=>{
+    const ds=res.curves.map((c,i)=>({
+      label:c.label,
+      data:c.data.map(p=>({x:p.I,y:p.t})),
+      borderColor:["red","blue","green","orange"][i%4],
+      pointRadius:0
+    }));
+    draw(ds,res.graph);
+  });
 }
 
-/*************** LOAD GRAPH ***************/
-function loadGraph() {
+function draw(ds,graph){
+  if(chart) chart.destroy();
 
-  const id = document.getElementById("graphId").value;
-
-  fetch(`${SCRIPT_URL}?type=graphFull&graphId=${id}`)
-    .then(res => res.json())
-    .then(res => {
-
-      const datasets = res.curves.map((c, i) => ({
-        label: c.label,
-        data: c.data.map(p => ({ x: p.I, y: p.t })),
-        borderColor: getColor(i),
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0
-      }));
-
-      drawChart(datasets, res.graph);
-    });
-}
-
-/*************** CHART ***************/
-function drawChart(datasets, graph) {
-
-  if (chart) chart.destroy();
-
-  const textColor = getComputedStyle(document.body).color;
-  const gridColor = getComputedStyle(document.documentElement)
-    .getPropertyValue('--grid');
-
-  chart = new Chart(document.getElementById("chart"), {
-    type: "line",
-    data: { datasets },
-
-    options: {
-      responsive: true,
-
-      interaction: {
-        mode: "nearest",
-        intersect: false
-      },
-
-      plugins: {
-        legend: {
-          labels: { color: textColor }
-        },
-
-        tooltip: {
-          callbacks: {
-            label: ctx => {
-              return `I=${ctx.raw.x.toFixed(1)} A, t=${ctx.raw.y.toFixed(3)} s`;
-            }
-          }
-        },
-
-        zoom: {
-          pan: {
-            enabled: true,
-            mode: 'xy'
-          },
-          zoom: {
-            wheel: { enabled: true },
-            pinch: { enabled: true },
-            mode: 'xy'
+  chart=new Chart(chartCanvas,{
+    type:"line",
+    data:{datasets:ds},
+    options:{
+      plugins:{
+        zoom:{pan:{enabled:true},zoom:{wheel:{enabled:true}}},
+        tooltip:{
+          callbacks:{
+            label:c=>`I=${c.raw.x}, t=${c.raw.y}`
           }
         }
       },
-
-      scales: {
-        x: {
-          type: "logarithmic",
-          min: Number(graph.X_Min),
-          max: Number(graph.X_Max),
-
-          ticks: {
-            color: textColor,
-            callback: val => {
-              const v = Number(val);
-              if ([1,10,100,1000,10000].includes(v)) return v;
-              return "";
-            }
-          },
-
-          grid: { color: gridColor },
-
-          title: {
-            display: true,
-            text: "Current (A)",
-            color: textColor
-          }
-        },
-
-        y: {
-          type: "logarithmic",
-          min: Number(graph.Y_Min),
-          max: Number(graph.Y_Max),
-
-          ticks: {
-            color: textColor,
-            callback: val => {
-              const v = Number(val);
-              if ([0.01,0.1,1,10,100].includes(v)) return v;
-              return "";
-            }
-          },
-
-          grid: { color: gridColor },
-
-          title: {
-            display: true,
-            text: "Time (s)",
-            color: textColor
-          }
-        }
+      scales:{
+        x:{type:"logarithmic",min:graph.X_Min,max:graph.X_Max},
+        y:{type:"logarithmic",min:graph.Y_Min,max:graph.Y_Max}
       }
     }
   });
 }
+
+/******** COORDINATION ********/
+function checkCoord(){
+  Promise.all([
+    fetch(`${SCRIPT_URL}?type=curveFull&relay=${relayA.value}`).then(r=>r.json()),
+    fetch(`${SCRIPT_URL}?type=curveFull&relay=${relayB.value}`).then(r=>r.json())
+  ]).then(([a,b])=>{
+
+    let minDiff=Infinity;
+
+    a.forEach(ca=>{
+      b.forEach(cb=>{
+        ca.data.forEach((pa,i)=>{
+          const pb=cb.data[i];
+          if(!pb) return;
+          const diff=pb.t - pa.t;
+          if(diff>0 && diff<minDiff) minDiff=diff;
+        });
+      });
+    });
+
+    coordResult.innerHTML =
+      minDiff===Infinity ? "❌ 비교 불가"
+      : minDiff<0.2 ? `⚠️ 위험 (Δt=${minDiff.toFixed(3)}s)`
+      : `✅ OK (Δt=${minDiff.toFixed(3)}s)`;
+  });
+}
+
+/******** RELAY LIST ********/
+function loadRelays(){
+  fetch(`${SCRIPT_URL}?type=relays`)
+  .then(r=>r.json())
+  .then(data=>{
+    relayList.innerHTML=data.map(r=>
+      `<div>${r.RelayTag} 
+       <button onclick="deleteRelay('${r.RelayTag}')">❌</button>
+      </div>`
+    ).join("");
+  });
+}
+
+/******** CRUD ********/
+function post(data){
+  return fetch(SCRIPT_URL,{
+    method:"POST",
+    body:JSON.stringify(data)
+  });
+}
+
+function addRelay(){
+  post({
+    action:"addRelay",
+    RelayTag:r_tag.value,
+    ModelID:r_model.value
+  }).then(()=>alert("추가됨"));
+}
+
+function deleteRelay(tag){
+  post({
+    action:"deleteRelay",
+    RelayTag:tag
+  }).then(()=>loadRelays());
+}
+
 </script>
 
 </body>
