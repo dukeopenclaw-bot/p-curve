@@ -1,97 +1,107 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>TCC Curve Viewer</title>
+<meta charset="UTF-8">
+<title>TCC Tool</title>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
-  <style>
-    body {
-      font-family: Arial;
-      margin: 20px;
-      background: #111;
-      color: #eee;
-    }
+<style>
+:root {
+  --bg: #ffffff;
+  --text: #000000;
+  --grid: #cccccc;
+  --card: #f5f5f5;
+}
 
-    h1 {
-      margin-bottom: 10px;
-    }
+[data-theme="dark"] {
+  --bg: #111;
+  --text: #eee;
+  --grid: #444;
+  --card: #1a1a1a;
+}
 
-    #controls {
-      margin-bottom: 20px;
-    }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial;
+  margin: 20px;
+}
 
-    input, button {
-      padding: 8px;
-      margin-right: 10px;
-      font-size: 14px;
-    }
+.section {
+  background: var(--card);
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+}
 
-    canvas {
-      background: #fff;
-      border-radius: 8px;
-    }
-  </style>
+input {
+  padding: 6px;
+  margin: 4px;
+}
+
+button {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+canvas {
+  background: var(--bg);
+  border-radius: 8px;
+}
+</style>
 </head>
 <body>
 
-<h1>⚡ TCC Curve Viewer</h1>
+<h1>⚡ TCC Tool</h1>
 
-<div id="controls">
-  <input id="relayInput" placeholder="RelayTag (예: R1,R2)">
-  <button onclick="loadCurves()">Load Curves</button>
+<button onclick="toggleTheme()">🌙 Toggle Theme</button>
 
-  <input id="graphIdInput" placeholder="GraphID (예: G1)">
+<div class="section">
+  <input id="graphId" placeholder="GraphID (G1)">
   <button onclick="loadGraph()">Load Graph</button>
 </div>
 
 <canvas id="chart" width="1000" height="600"></canvas>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyclVqorSU2KOyFZdM7Bc4s_3VuQ7lOYqDfb3ZzXwuarSkCMh2qElGipP6GezEHsz5F/exec"; // 🔥 여기 수정
+const SCRIPT_URL = "YOUR_SCRIPT_URL";
 
 let chart;
+let isDark = false;
 
-// 색상 자동 생성
+/*************** THEME ***************/
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+  if (chart) chart.update();
+}
+
+/*************** COLOR ***************/
 function getColor(i) {
   const colors = [
-    "#ff4d4d", "#4da6ff", "#4dff88",
-    "#ffd24d", "#cc66ff", "#00e6e6"
+    "#ff4d4d","#4da6ff","#4dff88",
+    "#ffd24d","#cc66ff","#00e6e6"
   ];
   return colors[i % colors.length];
 }
 
-// 🔹 Relay 기반 곡선
-function loadCurves() {
-
-  const relays = document.getElementById("relayInput").value;
-
-  fetch(`${SCRIPT_URL}?type=curveCompare&relays=${relays}`)
-    .then(res => res.json())
-    .then(data => drawChart(data));
-}
-
-
-// 🔹 Graph 기반 (추천)
+/*************** LOAD GRAPH ***************/
 function loadGraph() {
 
-  const graphId = document.getElementById("graphIdInput").value;
+  const id = document.getElementById("graphId").value;
 
-  fetch(`${SCRIPT_URL}?type=graphFull&graphId=${graphId}`)
+  fetch(`${SCRIPT_URL}?type=graphFull&graphId=${id}`)
     .then(res => res.json())
     .then(res => {
 
       const datasets = res.curves.map((c, i) => ({
         label: c.label,
-        data: c.data.map(p => ({
-          x: p.I,
-          y: p.t
-        })),
+        data: c.data.map(p => ({ x: p.I, y: p.t })),
         borderColor: getColor(i),
         borderWidth: 2,
-        fill: false,
+        pointRadius: 0,
         tension: 0
       }));
 
@@ -99,67 +109,98 @@ function loadGraph() {
     });
 }
 
-
-// 🔹 차트 그리기
-function drawChart(data, graphConfig = null) {
+/*************** CHART ***************/
+function drawChart(datasets, graph) {
 
   if (chart) chart.destroy();
 
-  let datasets;
-
-  if (Array.isArray(data) && data[0]?.data) {
-    // graphFull 구조
-    datasets = data;
-  } else {
-    // curveCompare 구조
-    datasets = data.map((c, i) => ({
-      label: `${c.relay} ${c.element}-${c.stage}`,
-      data: c.data.map(p => ({
-        x: p.I,
-        y: p.t
-      })),
-      borderColor: getColor(i),
-      borderWidth: 2,
-      fill: false,
-      tension: 0
-    }));
-  }
+  const textColor = getComputedStyle(document.body).color;
+  const gridColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--grid');
 
   chart = new Chart(document.getElementById("chart"), {
     type: "line",
     data: { datasets },
+
     options: {
       responsive: true,
 
+      interaction: {
+        mode: "nearest",
+        intersect: false
+      },
+
       plugins: {
         legend: {
-          labels: { color: "#fff" }
+          labels: { color: textColor }
+        },
+
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              return `I=${ctx.raw.x.toFixed(1)} A, t=${ctx.raw.y.toFixed(3)} s`;
+            }
+          }
+        },
+
+        zoom: {
+          pan: {
+            enabled: true,
+            mode: 'xy'
+          },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'xy'
+          }
         }
       },
 
       scales: {
         x: {
           type: "logarithmic",
+          min: Number(graph.X_Min),
+          max: Number(graph.X_Max),
+
+          ticks: {
+            color: textColor,
+            callback: val => {
+              const v = Number(val);
+              if ([1,10,100,1000,10000].includes(v)) return v;
+              return "";
+            }
+          },
+
+          grid: { color: gridColor },
+
           title: {
             display: true,
             text: "Current (A)",
-            color: "#fff"
-          },
-          min: graphConfig ? Number(graphConfig.X_Min) : undefined,
-          max: graphConfig ? Number(graphConfig.X_Max) : undefined,
-          ticks: { color: "#fff" }
+            color: textColor
+          }
         },
 
         y: {
           type: "logarithmic",
+          min: Number(graph.Y_Min),
+          max: Number(graph.Y_Max),
+
+          ticks: {
+            color: textColor,
+            callback: val => {
+              const v = Number(val);
+              if ([0.01,0.1,1,10,100].includes(v)) return v;
+              return "";
+            }
+          },
+
+          grid: { color: gridColor },
+
           title: {
             display: true,
             text: "Time (s)",
-            color: "#fff"
-          },
-          min: graphConfig ? Number(graphConfig.Y_Min) : undefined,
-          max: graphConfig ? Number(graphConfig.Y_Max) : undefined,
-          ticks: { color: "#fff" }
+            color: textColor
+          }
         }
       }
     }
