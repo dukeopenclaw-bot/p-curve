@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>TCC Curve Viewer</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      margin: 20px;
+      background: #111;
+      color: #eee;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    #controls {
+      margin-bottom: 20px;
+    }
+
+    input, button {
+      padding: 8px;
+      margin-right: 10px;
+      font-size: 14px;
+    }
+
+    canvas {
+      background: #fff;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>⚡ TCC Curve Viewer</h1>
+
+<div id="controls">
+  <input id="relayInput" placeholder="RelayTag (예: R1,R2)">
+  <button onclick="loadCurves()">Load Curves</button>
+
+  <input id="graphIdInput" placeholder="GraphID (예: G1)">
+  <button onclick="loadGraph()">Load Graph</button>
+</div>
+
+<canvas id="chart" width="1000" height="600"></canvas>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyclVqorSU2KOyFZdM7Bc4s_3VuQ7lOYqDfb3ZzXwuarSkCMh2qElGipP6GezEHsz5F/exec"; // 🔥 여기 수정
+
+let chart;
+
+// 색상 자동 생성
+function getColor(i) {
+  const colors = [
+    "#ff4d4d", "#4da6ff", "#4dff88",
+    "#ffd24d", "#cc66ff", "#00e6e6"
+  ];
+  return colors[i % colors.length];
+}
+
+// 🔹 Relay 기반 곡선
+function loadCurves() {
+
+  const relays = document.getElementById("relayInput").value;
+
+  fetch(`${SCRIPT_URL}?type=curveCompare&relays=${relays}`)
+    .then(res => res.json())
+    .then(data => drawChart(data));
+}
+
+
+// 🔹 Graph 기반 (추천)
+function loadGraph() {
+
+  const graphId = document.getElementById("graphIdInput").value;
+
+  fetch(`${SCRIPT_URL}?type=graphFull&graphId=${graphId}`)
+    .then(res => res.json())
+    .then(res => {
+
+      const datasets = res.curves.map((c, i) => ({
+        label: c.label,
+        data: c.data.map(p => ({
+          x: p.I,
+          y: p.t
+        })),
+        borderColor: getColor(i),
+        borderWidth: 2,
+        fill: false,
+        tension: 0
+      }));
+
+      drawChart(datasets, res.graph);
+    });
+}
+
+
+// 🔹 차트 그리기
+function drawChart(data, graphConfig = null) {
+
+  if (chart) chart.destroy();
+
+  let datasets;
+
+  if (Array.isArray(data) && data[0]?.data) {
+    // graphFull 구조
+    datasets = data;
+  } else {
+    // curveCompare 구조
+    datasets = data.map((c, i) => ({
+      label: `${c.relay} ${c.element}-${c.stage}`,
+      data: c.data.map(p => ({
+        x: p.I,
+        y: p.t
+      })),
+      borderColor: getColor(i),
+      borderWidth: 2,
+      fill: false,
+      tension: 0
+    }));
+  }
+
+  chart = new Chart(document.getElementById("chart"), {
+    type: "line",
+    data: { datasets },
+    options: {
+      responsive: true,
+
+      plugins: {
+        legend: {
+          labels: { color: "#fff" }
+        }
+      },
+
+      scales: {
+        x: {
+          type: "logarithmic",
+          title: {
+            display: true,
+            text: "Current (A)",
+            color: "#fff"
+          },
+          min: graphConfig ? Number(graphConfig.X_Min) : undefined,
+          max: graphConfig ? Number(graphConfig.X_Max) : undefined,
+          ticks: { color: "#fff" }
+        },
+
+        y: {
+          type: "logarithmic",
+          title: {
+            display: true,
+            text: "Time (s)",
+            color: "#fff"
+          },
+          min: graphConfig ? Number(graphConfig.Y_Min) : undefined,
+          max: graphConfig ? Number(graphConfig.Y_Max) : undefined,
+          ticks: { color: "#fff" }
+        }
+      }
+    }
+  });
+}
+</script>
+
+</body>
+</html>
