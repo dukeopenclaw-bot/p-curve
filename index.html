@@ -175,13 +175,22 @@ input:focus, select:focus { outline:2px solid var(--btn); }
 <div class="overlay" id="cfgModal">
   <div class="modal">
     <h3>⚙ Apps Script 설정</h3>
+
+    <!-- 기본값 표시 -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:12px;">
+      <div style="font-size:11px;opacity:.55;margin-bottom:4px;">기본값 (Default URL)</div>
+      <div id="defaultUrlText" style="font-size:11px;word-break:break-all;opacity:.8;"></div>
+      <button class="btn secondary sm" style="margin-top:6px;" onclick="useDefault()">기본값 사용</button>
+    </div>
+
     <div class="modal-field">
-      <label>Google Apps Script 실행 URL</label>
+      <label>사용할 URL (변경 시 입력)</label>
       <input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
     </div>
-    <div style="font-size:11px;opacity:.55;margin-top:-6px">
-      배포된 웹앱 URL을 입력하세요. 브라우저에 저장됩니다.
+    <div style="font-size:11px;opacity:.5;margin-top:-6px;">
+      변경하지 않으면 기본값이 사용됩니다. 브라우저에 저장됩니다.
     </div>
+
     <div class="modal-foot">
       <button class="btn secondary sm" onclick="closeCfg()">취소</button>
       <button class="btn sm" onclick="saveCfg()">저장</button>
@@ -229,16 +238,29 @@ function setStatus(msg, type) {
 }
 
 // ── MODAL ────────────────────────────────────────────────────
-function openCfg()  {
-  document.getElementById('cfgUrl').value = SCRIPT_URL;
+function openCfg() {
+  document.getElementById('defaultUrlText').textContent = DEFAULT_URL;
+  const saved = localStorage.getItem(STORE_KEY);
+  document.getElementById('cfgUrl').value = saved && saved !== DEFAULT_URL ? saved : '';
   document.getElementById('cfgModal').classList.add('open');
 }
 function closeCfg() { document.getElementById('cfgModal').classList.remove('open'); }
-function saveCfg()  {
+function useDefault() {
+  SCRIPT_URL = DEFAULT_URL;
+  localStorage.removeItem(STORE_KEY);
+  closeCfg();
+  setStatus('기본값 연결됨', 'ok');
+  loadRelays();
+}
+function saveCfg() {
   const v = document.getElementById('cfgUrl').value.trim();
-  if (!v) { alert('URL을 입력하세요'); return; }
-  SCRIPT_URL = v;
-  localStorage.setItem(STORE_KEY, SCRIPT_URL);
+  // 비어있으면 기본값 사용
+  SCRIPT_URL = v || DEFAULT_URL;
+  if (v) {
+    localStorage.setItem(STORE_KEY, SCRIPT_URL);
+  } else {
+    localStorage.removeItem(STORE_KEY);
+  }
   closeCfg();
   setStatus('연결됨', 'ok');
   loadRelays();
