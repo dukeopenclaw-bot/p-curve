@@ -192,7 +192,8 @@ input:focus, select:focus { outline:2px solid var(--btn); }
 <script>
 // ── CONFIG ───────────────────────────────────────────────────
 const STORE_KEY = 'tcc_script_url';
-let SCRIPT_URL  = localStorage.getItem(STORE_KEY) || '';
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyclVqorSU2KOyFZdM7Bc4s_3VuQ7lOYqDfb3ZzXwuarSkCMh2qElGipP6GezEHsz5F/exec';
+let SCRIPT_URL  = localStorage.getItem(STORE_KEY) || DEFAULT_URL;
 let chartInst   = null;
 let sidebarOpen = true;
 
