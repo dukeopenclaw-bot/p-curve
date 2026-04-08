@@ -223,11 +223,16 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
     <div class="field-row">
       <div class="field">
         <label>모델 *</label>
-        <select id="f_model"><option value="">선택</option></select>
+        <select id="f_model" onchange="onModelChange()"><option value="">선택</option></select>
       </div>
       <div class="field">
         <label>전압 (kV)</label>
         <input id="f_volt" type="number" placeholder="22.9">
+      </div>
+      <div class="field" style="max-width:80px;">
+        <label>Is 단위</label>
+        <input id="f_isunit" readonly placeholder="—"
+          style="background:var(--card);color:var(--text);font-weight:700;text-align:center;">
       </div>
     </div>
     <div class="field-row">
@@ -412,8 +417,19 @@ function loadModels() {
     allModels = data;
     const sel = document.getElementById('f_model');
     sel.innerHTML = '<option value="">선택</option>' +
-      data.map(m => `<option value="${m.ModelID}">${m.Manufacturer} ${m.Model}</option>`).join('');
+      data.map(m => `<option value="${m.ModelID}">${m.Manufacturer} ${m.Model} (${m.IsUnit||'?'})</option>`).join('');
   }).catch(() => {});
+}
+
+function getModelIsUnit(modelId) {
+  const m = allModels.find(x => x.ModelID === modelId);
+  return m ? m.IsUnit || '?' : '?';
+}
+
+function onModelChange() {
+  const modelId = document.getElementById('f_model').value;
+  const m = allModels.find(x => x.ModelID === modelId);
+  document.getElementById('f_isunit').value = m ? (m.IsUnit || '?') : '';
 }
 
 function loadRelays() {
@@ -446,7 +462,7 @@ function renderRelayList() {
       <div class="dot" style="background:${r.Color||'#999'}"></div>
       <div class="relay-meta">
         <div class="relay-tag">${r.RelayTag}</div>
-        <div class="relay-sub">${r.Location||''} · ${r.ModelID||''}</div>
+        <div class="relay-sub">${r.Location||''} · ${r.ModelID||''} · Is: ${getModelIsUnit(r.ModelID)}</div>
       </div>
       <div class="relay-btns">
         <button class="btn secondary sm" onclick="openEditRelay('${r.RelayTag}')">수정</button>
@@ -556,6 +572,7 @@ function openAddRelay() {
   document.getElementById('f_tag').readOnly = false;
   document.getElementById('f_color').value = '#3b82f6';
   document.getElementById('f_model').value = '';
+  document.getElementById('f_isunit').value = '';
   document.getElementById('relayModal').classList.add('open');
 }
 
@@ -568,6 +585,7 @@ function openEditRelay(tag) {
   document.getElementById('f_tag').readOnly = true;
   document.getElementById('f_loc').value   = r.Location   || '';
   document.getElementById('f_model').value = r.ModelID    || '';
+  onModelChange();
   document.getElementById('f_volt').value  = r.VoltageLevel || '';
   document.getElementById('f_ctp').value   = r.CT_Primary  || '';
   document.getElementById('f_cts').value   = r.CT_Secondary || '';
