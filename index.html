@@ -2,19 +2,19 @@
 <html lang="ko" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<title>TCC Tool v1.2</title>
+<title>TCC Tool v2.0</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <style>
 :root {
   --bg:#fff; --text:#111; --card:#f4f5f7; --border:#dde1e7;
-  --btn:#3b82f6; --btn-txt:#fff; --danger:#ef4444;
-  --sidebar-w:280px; --header-h:48px;
+  --btn:#3b82f6; --btn-txt:#fff; --danger:#ef4444; --success:#22c55e;
+  --sidebar-w:300px; --header-h:48px;
 }
 [data-theme="dark"] {
   --bg:#0f0f0f; --text:#e8e8e8; --card:#1a1a1a; --border:#2a2a2a;
-  --btn:#2563eb; --btn-txt:#fff; --danger:#dc2626;
+  --btn:#2563eb; --danger:#dc2626; --success:#16a34a;
 }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
@@ -22,15 +22,13 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
 
 /* ── TOPBAR ── */
 .topbar { height:var(--header-h); display:flex; align-items:center; gap:10px;
-          padding:0 14px; background:var(--card); border-bottom:1px solid var(--border);
-          flex-shrink:0; }
+          padding:0 14px; background:var(--card); border-bottom:1px solid var(--border); flex-shrink:0; }
 .topbar h1 { font-size:16px; font-weight:700; }
-.badge { font-size:10px; background:var(--btn); color:#fff; padding:2px 7px;
-         border-radius:10px; }
+.badge { font-size:10px; background:var(--btn); color:#fff; padding:2px 7px; border-radius:10px; }
 .topbar-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
 .status { font-size:11px; padding:3px 8px; border-radius:10px; }
-.status.ok  { background:#dcfce7; color:#166534; }
-.status.err { background:#fee2e2; color:#991b1b; }
+.status.ok      { background:#dcfce7; color:#166534; }
+.status.err     { background:#fee2e2; color:#991b1b; }
 .status.loading { background:#fef9c3; color:#854d0e; }
 .icon-btn { background:none; border:1px solid var(--border); border-radius:6px;
             padding:5px 10px; cursor:pointer; color:var(--text); font-size:12px; }
@@ -41,74 +39,94 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
 
 /* ── SIDEBAR ── */
 .sidebar { width:var(--sidebar-w); background:var(--card); border-right:1px solid var(--border);
-           display:flex; flex-direction:column; transition:width .2s ease; overflow:hidden;
-           flex-shrink:0; }
+           display:flex; flex-direction:column; transition:width .2s; overflow:hidden; flex-shrink:0; }
 .sidebar.collapsed { width:40px; }
 .sidebar-toggle { height:40px; display:flex; align-items:center; justify-content:center;
                   cursor:pointer; border-bottom:1px solid var(--border); flex-shrink:0;
                   font-size:16px; background:none; border-left:none; border-right:none;
                   border-top:none; color:var(--text); width:100%; }
-.sidebar-content { overflow-y:auto; flex:1; padding:10px; display:flex;
-                   flex-direction:column; gap:8px; min-width:calc(var(--sidebar-w) - 0px); }
-.sidebar.collapsed .sidebar-content { display:none; }
+.sidebar-inner { overflow-y:auto; flex:1; padding:10px; display:flex; flex-direction:column;
+                 gap:8px; min-width:calc(var(--sidebar-w) - 0px); }
+.sidebar.collapsed .sidebar-inner { display:none; }
 
 /* ── PANEL ── */
-.panel { background:var(--bg); border:1px solid var(--border); border-radius:8px;
-         padding:10px 12px; }
+.panel { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
 .panel-title { font-size:11px; font-weight:700; text-transform:uppercase;
-               letter-spacing:.6px; opacity:.55; margin-bottom:8px; }
-.panel-row { display:flex; flex-direction:column; gap:4px; margin-bottom:8px; }
-.panel-row:last-child { margin-bottom:0; }
-.panel-row label { font-size:11px; opacity:.65; }
+               letter-spacing:.6px; opacity:.5; margin-bottom:8px; }
 
-/* ── FORM ELEMENTS ── */
-input, select { width:100%; padding:6px 8px; border:1px solid var(--border);
-                border-radius:5px; background:var(--bg); color:var(--text);
-                font-size:12px; }
-input:focus, select:focus { outline:2px solid var(--btn); }
-.btn { width:100%; padding:7px; border:none; border-radius:5px; cursor:pointer;
-       font-size:12px; font-weight:600; background:var(--btn); color:var(--btn-txt); }
+/* ── RELAY ITEM ── */
+.relay-item { display:flex; align-items:flex-start; gap:8px; padding:7px 0;
+              border-bottom:1px solid var(--border); }
+.relay-item:last-child { border-bottom:none; }
+.relay-item input[type=checkbox] { margin-top:3px; width:15px; height:15px; flex-shrink:0; cursor:pointer; }
+.dot { width:11px; height:11px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.relay-meta { flex:1; min-width:0; }
+.relay-tag  { font-weight:700; font-size:13px; }
+.relay-sub  { font-size:10px; opacity:.55; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.relay-btns { display:flex; gap:4px; flex-shrink:0; }
+
+/* ── BUTTONS ── */
+.btn { padding:6px 12px; border:none; border-radius:5px; cursor:pointer;
+       font-size:12px; font-weight:600; background:var(--btn); color:#fff; }
 .btn:hover { opacity:.88; }
-.btn.secondary { background:var(--border); color:var(--text); }
-.btn.sm { padding:4px 10px; width:auto; font-weight:normal; }
-.btn.danger { background:var(--danger); }
+.btn.secondary { background:var(--border); color:var(--text); font-weight:400; }
+.btn.danger    { background:var(--danger); }
+.btn.success   { background:var(--success); }
+.btn.sm { padding:3px 8px; font-size:11px; font-weight:400; }
+.btn.full { width:100%; padding:9px; font-size:13px; }
 .btn-row { display:flex; gap:6px; }
 
-/* ── MAIN CHART AREA ── */
+/* ── FORM ── */
+.field { display:flex; flex-direction:column; gap:3px; margin-bottom:10px; }
+.field:last-child { margin-bottom:0; }
+.field label { font-size:11px; opacity:.6; }
+.field input, .field select { width:100%; padding:7px 9px; border:1px solid var(--border);
+  border-radius:5px; background:var(--bg); color:var(--text); font-size:12px; }
+.field input:focus, .field select:focus { outline:2px solid var(--btn); }
+.field-row { display:flex; gap:6px; }
+.field-row .field { flex:1; }
+
+/* ── RANGE INPUTS ── */
+.range-group { display:flex; align-items:center; gap:5px; }
+.range-group input { flex:1; padding:5px 7px; border:1px solid var(--border);
+  border-radius:5px; background:var(--bg); color:var(--text); font-size:12px; }
+.range-group span { font-size:11px; opacity:.5; flex-shrink:0; }
+
+/* ── MAIN ── */
 .main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-.chart-wrap { flex:1; position:relative; padding:12px; }
+.chart-toolbar { display:flex; align-items:center; gap:8px; padding:8px 12px;
+                 border-bottom:1px solid var(--border); flex-shrink:0; flex-wrap:wrap; }
+.chart-hint { font-size:11px; opacity:.4; margin-left:auto; }
+.chart-area { flex:1; position:relative; padding:10px; }
 #chart { width:100% !important; height:100% !important; }
 
-/* ── RELAY LIST ── */
-.relay-row { display:flex; align-items:center; gap:7px; padding:5px 0;
-             border-bottom:1px solid var(--border); font-size:12px; }
-.relay-row:last-child { border-bottom:none; }
-.dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-.relay-name { flex:1; }
-.relay-sub { font-size:10px; opacity:.55; }
-#relayList { max-height:160px; overflow-y:auto; }
+/* ── SETTINGS TABLE (relay settings) ── */
+.stbl { width:100%; border-collapse:collapse; font-size:11px; }
+.stbl th { padding:4px 6px; background:var(--card); border:1px solid var(--border);
+           font-size:10px; text-transform:uppercase; opacity:.6; }
+.stbl td { padding:4px 6px; border:1px solid var(--border); }
+.stbl tr:hover td { background:var(--card); }
 
-/* ── COORD RESULT ── */
-#coordResult { font-size:13px; font-weight:bold; margin-top:6px; min-height:20px; }
-
-/* ── MODAL ── */
+/* ── OVERLAY / MODAL ── */
 .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
-           z-index:200; align-items:center; justify-content:center; }
+           z-index:200; align-items:flex-start; justify-content:center; padding-top:60px; overflow-y:auto; }
 .overlay.open { display:flex; }
 .modal { background:var(--bg); border:1px solid var(--border); border-radius:10px;
-         padding:22px; width:360px; max-width:94vw; }
-.modal h3 { font-size:15px; margin-bottom:14px; }
-.modal-field { margin-bottom:12px; display:flex; flex-direction:column; gap:4px; }
-.modal-field label { font-size:11px; opacity:.6; }
-.modal-foot { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+         padding:22px; width:480px; max-width:96vw; margin-bottom:40px; }
+.modal.wide { width:700px; }
+.modal h3 { font-size:15px; margin-bottom:16px; }
+.modal-foot { display:flex; gap:8px; justify-content:flex-end; margin-top:18px;
+              padding-top:14px; border-top:1px solid var(--border); }
+.section-title { font-size:12px; font-weight:700; margin:14px 0 8px;
+                 padding-bottom:4px; border-bottom:1px solid var(--border); }
 </style>
 </head>
 <body>
 
-<!-- TOPBAR -->
+<!-- ── TOPBAR ── -->
 <div class="topbar">
   <h1>⚡ TCC Tool</h1>
-  <span class="badge">v1.2.0</span>
+  <span class="badge">v2.0.0</span>
   <div id="statusBar"></div>
   <div class="topbar-right">
     <button class="icon-btn" onclick="openCfg()">⚙ 설정</button>
@@ -116,128 +134,549 @@ input:focus, select:focus { outline:2px solid var(--btn); }
   </div>
 </div>
 
-<!-- LAYOUT -->
+<!-- ── LAYOUT ── -->
 <div class="layout">
 
-  <!-- SIDEBAR -->
+  <!-- ── SIDEBAR ── -->
   <div class="sidebar" id="sidebar">
-    <button class="sidebar-toggle" onclick="toggleSidebar()" title="사이드바 접기/펼치기">◀</button>
+    <button class="sidebar-toggle" onclick="toggleSidebar()">◀</button>
 
-    <div class="sidebar-content">
+    <div class="sidebar-inner">
 
-      <!-- GRAPH LOAD -->
+      <!-- 릴레이 목록 -->
       <div class="panel">
-        <div class="panel-title">그래프 불러오기</div>
-        <div class="panel-row">
-          <label>GraphID</label>
-          <input id="graphId" placeholder="예) G-001">
+        <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>릴레이 목록</span>
+          <div class="btn-row">
+            <button class="btn secondary sm" onclick="loadRelays()">↺</button>
+            <button class="btn sm" onclick="openAddRelay()">+ 추가</button>
+          </div>
         </div>
-        <div class="btn-row">
-          <button class="btn" onclick="loadGraph()">불러오기</button>
-          <button class="btn secondary sm" onclick="resetZoom()">초기화</button>
+        <div id="relayList">
+          <span style="font-size:11px;opacity:.5">↺ 버튼을 눌러 불러오세요</span>
         </div>
       </div>
 
-      <!-- RELAY LIST -->
+      <!-- 그래프 축 범위 -->
       <div class="panel">
-        <div class="panel-title">릴레이 목록 <button class="btn secondary sm" style="float:right" onclick="loadRelays()">새로고침</button></div>
-        <div id="relayList"><span style="opacity:.5;font-size:11px">새로고침을 눌러주세요</span></div>
+        <div class="panel-title">그래프 범위</div>
+        <div style="font-size:11px;opacity:.55;margin-bottom:6px;">X축 (전류, A)</div>
+        <div class="range-group" style="margin-bottom:8px;">
+          <input id="xMin" type="number" value="10" placeholder="최솟값">
+          <span>~</span>
+          <input id="xMax" type="number" value="10000" placeholder="최댓값">
+        </div>
+        <div style="font-size:11px;opacity:.55;margin-bottom:6px;">Y축 (시간, s)</div>
+        <div class="range-group">
+          <input id="yMin" type="number" value="0.01" step="0.01" placeholder="최솟값">
+          <span>~</span>
+          <input id="yMax" type="number" value="100" placeholder="최댓값">
+        </div>
       </div>
 
-      <!-- COORDINATION -->
-      <div class="panel">
-        <div class="panel-title">Coordination Check</div>
-        <div class="panel-row">
-          <label>Relay A (후비)</label>
-          <select id="relayA"><option value="">선택</option></select>
-        </div>
-        <div class="panel-row">
-          <label>Relay B (주보호)</label>
-          <select id="relayB"><option value="">선택</option></select>
-        </div>
-        <button class="btn" onclick="checkCoord()">협조 검토</button>
-        <div id="coordResult"></div>
-      </div>
+      <!-- 그래프 그리기 -->
+      <button class="btn full success" onclick="drawSelected()">📊 그래프 그리기</button>
+      <button class="btn full secondary" onclick="resetZoom()">확대 초기화</button>
 
-    </div><!-- /sidebar-content -->
-  </div><!-- /sidebar -->
-
-  <!-- MAIN -->
-  <div class="main">
-    <div class="chart-wrap">
-      <canvas id="chart"></canvas>
     </div>
   </div>
 
-</div><!-- /layout -->
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <div class="chart-toolbar">
+      <span id="chartTitle" style="font-size:13px;font-weight:600;opacity:.7">릴레이를 선택 후 그래프 그리기</span>
+      <span class="chart-hint">휠: 확대 / 드래그: 이동</span>
+    </div>
+    <div class="chart-area">
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+</div>
 
-<!-- SETTINGS MODAL -->
+<!-- ══ MODAL: 릴레이 추가/수정 ══ -->
+<div class="overlay" id="relayModal">
+  <div class="modal">
+    <h3 id="relayModalTitle">릴레이 추가</h3>
+
+    <div class="section-title">기본 정보</div>
+    <div class="field-row">
+      <div class="field">
+        <label>RelayTag *</label>
+        <input id="f_tag" placeholder="예) REL-F01">
+      </div>
+      <div class="field">
+        <label>위치 / Bay</label>
+        <input id="f_loc" placeholder="예) 22kV 1번 피더">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>모델 *</label>
+        <select id="f_model"><option value="">선택</option></select>
+      </div>
+      <div class="field">
+        <label>전압 (kV)</label>
+        <input id="f_volt" type="number" placeholder="22.9">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>CT 1차 (A)</label>
+        <input id="f_ctp" type="number" placeholder="400" oninput="calcCT()">
+      </div>
+      <div class="field">
+        <label>CT 2차 (A)</label>
+        <input id="f_cts" type="number" placeholder="5" oninput="calcCT()">
+      </div>
+      <div class="field">
+        <label>CT비 (자동)</label>
+        <input id="f_ctr" type="number" placeholder="80" readonly style="opacity:.6">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>정격전류 In (A)</label>
+        <input id="f_in" type="number" placeholder="5">
+      </div>
+      <div class="field">
+        <label>색상</label>
+        <input id="f_color" type="color" value="#3b82f6" style="height:36px;padding:2px;">
+      </div>
+    </div>
+    <div class="field">
+      <label>비고</label>
+      <input id="f_notes" placeholder="">
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn secondary" onclick="closeRelayModal()">취소</button>
+      <button class="btn" onclick="saveRelay()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: 보호 설정 (Settings) ══ -->
+<div class="overlay" id="settingModal">
+  <div class="modal wide">
+    <h3 id="settingModalTitle">보호 설정</h3>
+
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+      <span id="settingRelayInfo" style="font-size:13px;font-weight:600;"></span>
+      <button class="btn sm" onclick="openAddSetting()">+ 스테이지 추가</button>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="stbl">
+        <thead>
+          <tr>
+            <th>Element</th><th>Stage</th><th>Enable</th><th>CurveType</th>
+            <th>Is</th><th>TMS</th><th>t (DT)</th><th>t_min</th><th>t_max</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="settingTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- 스테이지 추가 폼 -->
+    <div id="addSettingForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <div class="section-title">스테이지 추가</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Element</label>
+          <select id="s_elem">
+            <option value="PHPTOC">PHPTOC (상간)</option>
+            <option value="EFPTOC">EFPTOC (지락)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Stage</label>
+          <input id="s_stage" type="number" value="1" min="1" max="3">
+        </div>
+        <div class="field">
+          <label>Curve Type</label>
+          <select id="s_curve">
+            <option>IEC NI</option><option>IEC VI</option>
+            <option>IEC EI</option><option>IEC LTI</option>
+            <option>IEEE MI</option><option>IEEE VI</option>
+            <option>IEEE EI</option><option>DT</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Is (픽업)</label><input id="s_is" type="number" step="0.01" placeholder="1.2"></div>
+        <div class="field"><label>TMS/k</label><input id="s_tms" type="number" step="0.01" placeholder="0.3"></div>
+        <div class="field"><label>t (DT, s)</label><input id="s_t" type="number" step="0.01" placeholder=""></div>
+        <div class="field"><label>t_min (s)</label><input id="s_tmin" type="number" step="0.01" placeholder="0.1"></div>
+        <div class="field"><label>t_max (s)</label><input id="s_tmax" type="number" step="0.01" placeholder=""></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn secondary sm" onclick="closeAddSetting()">취소</button>
+        <button class="btn sm" onclick="saveSetting()">추가</button>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn secondary" onclick="closeSettingModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Apps Script 설정 ══ -->
 <div class="overlay" id="cfgModal">
   <div class="modal">
     <h3>⚙ Apps Script 설정</h3>
-
-    <!-- 기본값 표시 -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:12px;">
       <div style="font-size:11px;opacity:.55;margin-bottom:4px;">기본값 (Default URL)</div>
       <div id="defaultUrlText" style="font-size:11px;word-break:break-all;opacity:.8;"></div>
       <button class="btn secondary sm" style="margin-top:6px;" onclick="useDefault()">기본값 사용</button>
     </div>
-
-    <div class="modal-field">
-      <label>사용할 URL (변경 시 입력)</label>
+    <div class="field">
+      <label>변경할 URL (변경 시만 입력)</label>
       <input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
     </div>
-    <div style="font-size:11px;opacity:.5;margin-top:-6px;">
-      변경하지 않으면 기본값이 사용됩니다. 브라우저에 저장됩니다.
-    </div>
-
+    <div style="font-size:11px;opacity:.5;">비워두면 기본값이 사용됩니다.</div>
     <div class="modal-foot">
-      <button class="btn secondary sm" onclick="closeCfg()">취소</button>
-      <button class="btn sm" onclick="saveCfg()">저장</button>
+      <button class="btn secondary" onclick="closeCfg()">취소</button>
+      <button class="btn" onclick="saveCfg()">저장</button>
     </div>
   </div>
 </div>
 
 <script>
-// ── CONFIG ───────────────────────────────────────────────────
-const STORE_KEY = 'tcc_script_url';
+// ══ CONFIG ═══════════════════════════════════════════════════
+const STORE_KEY   = 'tcc_script_url';
 const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyclVqorSU2KOyFZdM7Bc4s_3VuQ7lOYqDfb3ZzXwuarSkCMh2qElGipP6GezEHsz5F/exec';
-let SCRIPT_URL  = localStorage.getItem(STORE_KEY) || DEFAULT_URL;
-let chartInst   = null;
-let sidebarOpen = true;
+let   SCRIPT_URL  = localStorage.getItem(STORE_KEY) || DEFAULT_URL;
 
-// ── INIT ─────────────────────────────────────────────────────
+// ══ STATE ════════════════════════════════════════════════════
+let chartInst     = null;
+let sidebarOpen   = true;
+let allRelays     = [];
+let allModels     = [];
+let allSettings   = [];
+let editingTag    = null;   // relay tag being edited
+let settingTag    = null;   // relay tag for settings modal
+
+// ══ INIT ═════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
-  if (!SCRIPT_URL) {
-    openCfg();
-  } else {
-    setStatus('연결됨', 'ok');
-    loadRelays();
-  }
+  setStatus('연결됨', 'ok');
+  loadModels();
+  loadRelays();
 });
 
-// ── SIDEBAR ──────────────────────────────────────────────────
+// ══ SIDEBAR ══════════════════════════════════════════════════
 function toggleSidebar() {
   sidebarOpen = !sidebarOpen;
   const sb  = document.getElementById('sidebar');
-  const btn = sb.querySelector('.sidebar-toggle');
   sb.classList.toggle('collapsed', !sidebarOpen);
-  btn.textContent = sidebarOpen ? '◀' : '▶';
+  sb.querySelector('.sidebar-toggle').textContent = sidebarOpen ? '◀' : '▶';
 }
 
-// ── THEME ────────────────────────────────────────────────────
+// ══ THEME ════════════════════════════════════════════════════
 function toggleTheme() {
   const cur = document.documentElement.getAttribute('data-theme');
   document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
 }
 
-// ── STATUS ───────────────────────────────────────────────────
+// ══ STATUS ═══════════════════════════════════════════════════
 function setStatus(msg, type) {
   document.getElementById('statusBar').innerHTML =
     `<span class="status ${type}">${msg}</span>`;
 }
 
-// ── MODAL ────────────────────────────────────────────────────
+// ══ API ══════════════════════════════════════════════════════
+function api(params) {
+  if (!SCRIPT_URL) { openCfg(); return Promise.reject(new Error('URL 미설정')); }
+  return fetch(`${SCRIPT_URL}?${new URLSearchParams(params)}`).then(r => r.json());
+}
+function post(data) {
+  if (!SCRIPT_URL) { openCfg(); return Promise.reject(new Error('URL 미설정')); }
+  return fetch(SCRIPT_URL, { method:'POST', body:JSON.stringify(data) }).then(r => r.json());
+}
+
+// ══ LOAD DATA ════════════════════════════════════════════════
+function loadModels() {
+  api({ type:'models' }).then(data => {
+    if (!Array.isArray(data)) return;
+    allModels = data;
+    const sel = document.getElementById('f_model');
+    sel.innerHTML = '<option value="">선택</option>' +
+      data.map(m => `<option value="${m.ModelID}">${m.Manufacturer} ${m.Model}</option>`).join('');
+  }).catch(() => {});
+}
+
+function loadRelays() {
+  setStatus('불러오는 중...', 'loading');
+  api({ type:'relays' }).then(data => {
+    if (!Array.isArray(data)) { setStatus('오류', 'err'); return; }
+    allRelays = data;
+    renderRelayList();
+    setStatus(`릴레이 ${data.length}개`, 'ok');
+  }).catch(e => setStatus('오류: ' + e.message, 'err'));
+}
+
+function loadSettings() {
+  return api({ type:'settings' }).then(data => {
+    allSettings = Array.isArray(data) ? data : [];
+    return allSettings;
+  });
+}
+
+// ══ RENDER RELAY LIST ════════════════════════════════════════
+function renderRelayList() {
+  const el = document.getElementById('relayList');
+  if (!allRelays.length) {
+    el.innerHTML = '<span style="font-size:11px;opacity:.5">등록된 릴레이 없음</span>';
+    return;
+  }
+  el.innerHTML = allRelays.map(r => `
+    <div class="relay-item">
+      <input type="checkbox" id="chk_${r.RelayTag}" value="${r.RelayTag}">
+      <div class="dot" style="background:${r.Color||'#999'}"></div>
+      <div class="relay-meta">
+        <div class="relay-tag">${r.RelayTag}</div>
+        <div class="relay-sub">${r.Location||''} · ${r.ModelID||''}</div>
+      </div>
+      <div class="relay-btns">
+        <button class="btn secondary sm" onclick="openEditRelay('${r.RelayTag}')">수정</button>
+        <button class="btn secondary sm" onclick="openSettingModal('${r.RelayTag}')">설정</button>
+        <button class="btn danger sm" onclick="deleteRelay('${r.RelayTag}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+// ══ DRAW GRAPH ═══════════════════════════════════════════════
+function drawSelected() {
+  const checked = allRelays
+    .map(r => r.RelayTag)
+    .filter(tag => document.getElementById('chk_' + tag)?.checked);
+
+  if (!checked.length) { alert('릴레이를 하나 이상 선택하세요'); return; }
+
+  setStatus('계산 중...', 'loading');
+  document.getElementById('chartTitle').textContent = checked.join(', ');
+
+  api({ type:'curveCompare', relays: checked.join(',') })
+    .then(curves => {
+      if (!Array.isArray(curves) || !curves.length) {
+        setStatus('곡선 없음', 'err'); return;
+      }
+      const graph = {
+        X_Min: document.getElementById('xMin').value || 10,
+        X_Max: document.getElementById('xMax').value || 10000,
+        Y_Min: document.getElementById('yMin').value || 0.01,
+        Y_Max: document.getElementById('yMax').value || 100,
+      };
+      renderChart(curves, graph);
+      setStatus(`${curves.length}개 곡선`, 'ok');
+    })
+    .catch(e => setStatus('오류: ' + e.message, 'err'));
+}
+
+function renderChart(curves, graph) {
+  const canvas = document.getElementById('chart');
+  const datasets = curves.map(c => ({
+    label          : c.relay + ' ' + c.element + ' S' + c.stage + ' (' + c.curveType + ')',
+    data           : c.data.map(p => ({ x: p.I, y: p.t })),
+    borderColor    : c.color || '#555',
+    backgroundColor: (c.color || '#555') + '22',
+    pointRadius    : 0,
+    borderWidth    : 2,
+    tension        : 0,
+  }));
+
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart(canvas, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      animation: false, responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'nearest', intersect:false },
+      plugins: {
+        zoom: {
+          pan : { enabled:true, mode:'xy' },
+          zoom: { wheel:{ enabled:true }, pinch:{ enabled:true }, mode:'xy' },
+        },
+        tooltip: {
+          callbacks: { label: ctx =>
+            `${ctx.dataset.label}: I=${ctx.raw.x.toFixed(1)}A, t=${ctx.raw.y.toFixed(3)}s` }
+        },
+        legend: { position:'bottom' }
+      },
+      scales: {
+        x: { type:'logarithmic', min:Number(graph.X_Min), max:Number(graph.X_Max),
+             title:{ display:true, text:'전류 (A)' } },
+        y: { type:'logarithmic', min:Number(graph.Y_Min), max:Number(graph.Y_Max),
+             title:{ display:true, text:'동작시간 (s)' } }
+      }
+    }
+  });
+}
+
+function resetZoom() { if (chartInst) chartInst.resetZoom(); }
+
+// ══ RELAY ADD / EDIT MODAL ═══════════════════════════════════
+function openAddRelay() {
+  editingTag = null;
+  document.getElementById('relayModalTitle').textContent = '릴레이 추가';
+  ['f_tag','f_loc','f_volt','f_ctp','f_cts','f_ctr','f_in','f_notes'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f_tag').readOnly = false;
+  document.getElementById('f_color').value = '#3b82f6';
+  document.getElementById('f_model').value = '';
+  document.getElementById('relayModal').classList.add('open');
+}
+
+function openEditRelay(tag) {
+  const r = allRelays.find(x => x.RelayTag === tag);
+  if (!r) return;
+  editingTag = tag;
+  document.getElementById('relayModalTitle').textContent = '릴레이 수정: ' + tag;
+  document.getElementById('f_tag').value   = r.RelayTag   || '';
+  document.getElementById('f_tag').readOnly = true;
+  document.getElementById('f_loc').value   = r.Location   || '';
+  document.getElementById('f_model').value = r.ModelID    || '';
+  document.getElementById('f_volt').value  = r.VoltageLevel || '';
+  document.getElementById('f_ctp').value   = r.CT_Primary  || '';
+  document.getElementById('f_cts').value   = r.CT_Secondary || '';
+  document.getElementById('f_ctr').value   = r.CT_Ratio    || '';
+  document.getElementById('f_in').value    = r.In          || '';
+  document.getElementById('f_color').value = r.Color       || '#3b82f6';
+  document.getElementById('f_notes').value = r.Notes       || '';
+  document.getElementById('relayModal').classList.add('open');
+}
+
+function closeRelayModal() {
+  document.getElementById('relayModal').classList.remove('open');
+  editingTag = null;
+}
+
+function calcCT() {
+  const p = parseFloat(document.getElementById('f_ctp').value);
+  const s = parseFloat(document.getElementById('f_cts').value);
+  if (p && s) document.getElementById('f_ctr').value = (p / s).toFixed(2);
+}
+
+function saveRelay() {
+  const tag = document.getElementById('f_tag').value.trim();
+  if (!tag) { alert('RelayTag를 입력하세요'); return; }
+
+  const data = {
+    RelayTag    : tag,
+    Location    : document.getElementById('f_loc').value,
+    ModelID     : document.getElementById('f_model').value,
+    VoltageLevel: document.getElementById('f_volt').value,
+    CT_Primary  : document.getElementById('f_ctp').value,
+    CT_Secondary: document.getElementById('f_cts').value,
+    CT_Ratio    : document.getElementById('f_ctr').value,
+    In          : document.getElementById('f_in').value,
+    Color       : document.getElementById('f_color').value,
+    Notes       : document.getElementById('f_notes').value,
+  };
+
+  post({ action:'saveRelay', data })
+    .then(res => {
+      if (res.error) { alert('저장 오류: ' + res.error); return; }
+      closeRelayModal();
+      loadRelays();
+    })
+    .catch(e => alert('오류: ' + e.message));
+}
+
+function deleteRelay(tag) {
+  if (!confirm(`"${tag}" 릴레이를 삭제하시겠습니까?`)) return;
+  post({ action:'deleteRelay', RelayTag: tag })
+    .then(res => {
+      if (res.error) { alert('오류: ' + res.error); return; }
+      loadRelays();
+    });
+}
+
+// ══ SETTINGS MODAL ═══════════════════════════════════════════
+function openSettingModal(tag) {
+  settingTag = tag;
+  document.getElementById('settingModalTitle').textContent = '보호 설정';
+  document.getElementById('settingRelayInfo').textContent = tag;
+  document.getElementById('addSettingForm').style.display = 'none';
+  document.getElementById('settingModal').classList.add('open');
+
+  loadSettings().then(() => renderSettingTable());
+}
+
+function closeSettingModal() {
+  document.getElementById('settingModal').classList.remove('open');
+  settingTag = null;
+}
+
+function renderSettingTable() {
+  const rows = allSettings.filter(s => s.RelayTag === settingTag);
+  const tbody = document.getElementById('settingTableBody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;opacity:.5;padding:12px">설정 없음</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(s => `
+    <tr>
+      <td>${s.Element}</td>
+      <td>${s.Stage}</td>
+      <td>${s.Enable === true || s.Enable === 'TRUE' ? '✅' : '❌'}</td>
+      <td>${s.CurveType}</td>
+      <td>${s.Is}</td>
+      <td>${s.TMS||''}</td>
+      <td>${s.t||''}</td>
+      <td>${s.t_min||''}</td>
+      <td>${s.t_max||''}</td>
+      <td><button class="btn danger sm" onclick="deleteSetting('${s.SettingID}')">✕</button></td>
+    </tr>`).join('');
+}
+
+function openAddSetting() {
+  document.getElementById('addSettingForm').style.display = 'block';
+}
+function closeAddSetting() {
+  document.getElementById('addSettingForm').style.display = 'none';
+}
+
+function saveSetting() {
+  const elem  = document.getElementById('s_elem').value;
+  const stage = document.getElementById('s_stage').value;
+  if (!settingTag || !elem || !stage) { alert('필수 항목을 입력하세요'); return; }
+
+  const data = {
+    SettingID : settingTag + '_' + elem + '_' + stage,
+    RelayTag  : settingTag,
+    Element   : elem,
+    Stage     : Number(stage),
+    Enable    : true,
+    CurveType : document.getElementById('s_curve').value,
+    Is        : document.getElementById('s_is').value,
+    TMS       : document.getElementById('s_tms').value,
+    t         : document.getElementById('s_t').value,
+    t_min     : document.getElementById('s_tmin').value,
+    t_max     : document.getElementById('s_tmax').value,
+    Notes     : '',
+  };
+
+  post({ action:'saveSetting', data })
+    .then(res => {
+      if (res.error) { alert('저장 오류: ' + res.error); return; }
+      closeAddSetting();
+      loadSettings().then(() => renderSettingTable());
+    })
+    .catch(e => alert('오류: ' + e.message));
+}
+
+function deleteSetting(id) {
+  if (!confirm('설정을 삭제하시겠습니까?')) return;
+  post({ action:'deleteSetting', SettingID: id })
+    .then(res => {
+      if (res.error) { alert('오류: ' + res.error); return; }
+      loadSettings().then(() => renderSettingTable());
+    });
+}
+
+// ══ CFG MODAL ════════════════════════════════════════════════
 function openCfg() {
   document.getElementById('defaultUrlText').textContent = DEFAULT_URL;
   const saved = localStorage.getItem(STORE_KEY);
@@ -254,217 +693,12 @@ function useDefault() {
 }
 function saveCfg() {
   const v = document.getElementById('cfgUrl').value.trim();
-  // 비어있으면 기본값 사용
   SCRIPT_URL = v || DEFAULT_URL;
-  if (v) {
-    localStorage.setItem(STORE_KEY, SCRIPT_URL);
-  } else {
-    localStorage.removeItem(STORE_KEY);
-  }
+  if (v) localStorage.setItem(STORE_KEY, SCRIPT_URL);
+  else   localStorage.removeItem(STORE_KEY);
   closeCfg();
   setStatus('연결됨', 'ok');
   loadRelays();
-}
-
-// ── API ──────────────────────────────────────────────────────
-function api(params) {
-  if (!SCRIPT_URL) { openCfg(); return Promise.reject(new Error('URL 미설정')); }
-  return fetch(`${SCRIPT_URL}?${new URLSearchParams(params)}`).then(r => r.json());
-}
-function post(data) {
-  if (!SCRIPT_URL) { openCfg(); return Promise.reject(new Error('URL 미설정')); }
-  return fetch(SCRIPT_URL, { method:'POST', body:JSON.stringify(data) }).then(r => r.json());
-}
-
-// ── GRAPH ────────────────────────────────────────────────────
-function loadGraph() {
-  const gid = document.getElementById('graphId').value.trim();
-  if (!gid) { alert('GraphID를 입력하세요'); return; }
-  setStatus('불러오는 중...', 'loading');
-
-  api({ type:'graphFull', graphId:gid })
-    .then(res => {
-      if (res.error) throw new Error(res.error);
-      if (!res.curves || !res.curves.length) {
-        setStatus('곡선 없음', 'err'); return;
-      }
-      drawChart(res.curves, res.graph);
-      setStatus(`${res.curves.length}개 곡선`, 'ok');
-    })
-    .catch(e => setStatus('오류: ' + e.message, 'err'));
-}
-
-function drawChart(curves, graph) {
-  const canvas = document.getElementById('chart');
-  const datasets = curves.map(c => ({
-    label          : c.label || '(unnamed)',
-    data           : c.data.map(p => ({ x: p.I, y: p.t })),
-    borderColor    : c.color || '#555',
-    backgroundColor: (c.color || '#555') + '22',
-    pointRadius    : 0,
-    borderWidth    : 2,
-    tension        : 0,
-  }));
-
-  if (chartInst) chartInst.destroy();
-  chartInst = new Chart(canvas, {
-    type: 'line',
-    data: { datasets },
-    options: {
-      animation   : false,
-      responsive  : true,
-      maintainAspectRatio: false,
-      interaction : { mode:'nearest', intersect:false },
-      plugins: {
-        zoom: {
-          pan : { enabled:true, mode:'xy' },
-          zoom: { wheel:{ enabled:true }, pinch:{ enabled:true }, mode:'xy' },
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx =>
-              `${ctx.dataset.label}: I=${ctx.raw.x.toFixed(1)}A, t=${ctx.raw.y.toFixed(3)}s`
-          }
-        },
-        legend: { position:'bottom' }
-      },
-      scales: {
-        x: {
-          type : 'logarithmic',
-          min  : Number(graph.X_Min) || 10,
-          max  : Number(graph.X_Max) || 10000,
-          title: { display:true, text:'전류 (A)' },
-        },
-        y: {
-          type : 'logarithmic',
-          min  : Number(graph.Y_Min) || 0.01,
-          max  : Number(graph.Y_Max) || 100,
-          title: { display:true, text:'동작시간 (s)' },
-        }
-      }
-    }
-  });
-}
-
-function resetZoom() { if (chartInst) chartInst.resetZoom(); }
-
-// ── RELAYS ───────────────────────────────────────────────────
-function loadRelays() {
-  api({ type:'relays' }).then(data => {
-    if (!Array.isArray(data)) return;
-
-    // Render list
-    document.getElementById('relayList').innerHTML = data.length === 0
-      ? '<span style="opacity:.5;font-size:11px">릴레이 없음</span>'
-      : data.map(r => `
-          <div class="relay-row">
-            <div class="dot" style="background:${r.Color||'#999'}"></div>
-            <div class="relay-name">
-              <div>${r.RelayTag}</div>
-              <div class="relay-sub">${r.Location||''} · ${r.ModelID||''}</div>
-            </div>
-            <button class="btn danger sm" onclick="deleteRelay('${r.RelayTag}')">✕</button>
-          </div>`).join('');
-
-    // Populate dropdowns
-    ['relayA','relayB'].forEach(id => {
-      const sel = document.getElementById(id);
-      const cur = sel.value;
-      sel.innerHTML = '<option value="">선택</option>' +
-        data.map(r =>
-          `<option value="${r.RelayTag}">${r.RelayTag} — ${r.Location||''}</option>`
-        ).join('');
-      sel.value = cur;
-    });
-  }).catch(() => {});
-}
-
-function deleteRelay(tag) {
-  if (!confirm(`"${tag}" 릴레이를 삭제하시겠습니까?`)) return;
-  post({ action:'deleteRelay', RelayTag:tag })
-    .then(res => {
-      if (res.error) { alert('오류: ' + res.error); return; }
-      loadRelays();
-    });
-}
-
-// ── COORDINATION ─────────────────────────────────────────────
-function checkCoord() {
-  const tagA = document.getElementById('relayA').value;
-  const tagB = document.getElementById('relayB').value;
-  const resEl = document.getElementById('coordResult');
-
-  if (!tagA || !tagB)  { alert('릴레이 A, B를 선택하세요'); return; }
-  if (tagA === tagB)   { alert('서로 다른 릴레이를 선택하세요'); return; }
-
-  setStatus('협조 검토 중...', 'loading');
-
-  Promise.all([
-    api({ type:'curveFull', relay:tagA }),
-    api({ type:'curveFull', relay:tagB }),
-  ]).then(([curvesA, curvesB]) => {
-    if (!curvesA.length || !curvesB.length) {
-      resEl.innerHTML = '❌ 곡선 데이터 없음'; return;
-    }
-
-    let minDiff = Infinity;
-    curvesA.forEach(ca => {
-      curvesB.forEach(cb => {
-        ca.data.forEach(pa => {
-          const pb = cb.data.find(p => Math.abs(p.I - pa.I) / pa.I < 0.01);
-          if (!pb) return;
-          const diff = pb.t - pa.t;
-          if (diff > 0 && diff < minDiff) minDiff = diff;
-        });
-      });
-    });
-
-    if (minDiff === Infinity) {
-      resEl.innerHTML = '❌ 비교 불가';
-      resEl.style.color = '';
-    } else if (minDiff < 0.2) {
-      resEl.innerHTML = `⚠️ 부족 (Δt=${minDiff.toFixed(3)}s)`;
-      resEl.style.color = '#ef4444';
-    } else {
-      resEl.innerHTML = `✅ OK (Δt=${minDiff.toFixed(3)}s)`;
-      resEl.style.color = '#22c55e';
-    }
-
-    // Draw comparison chart
-    const datasets = [
-      ...curvesA.map(c => ({
-        label:c.label || tagA, data:c.data.map(p=>({x:p.I,y:p.t})),
-        borderColor:c.color||'#3b82f6', pointRadius:0, borderWidth:2, tension:0
-      })),
-      ...curvesB.map(c => ({
-        label:c.label || tagB, data:c.data.map(p=>({x:p.I,y:p.t})),
-        borderColor:c.color||'#ef4444', pointRadius:0, borderWidth:2, tension:0,
-        borderDash:[5,4]
-      })),
-    ];
-
-    drawChart(datasets.length ? [{label:'', data:[], borderColor:'#000'}] : [], {
-      X_Min:10, X_Max:20000, Y_Min:0.01, Y_Max:100
-    });
-    // Redraw with coord datasets
-    if (chartInst) chartInst.destroy();
-    chartInst = new Chart(document.getElementById('chart'), {
-      type:'line', data:{ datasets },
-      options:{
-        animation:false, responsive:true, maintainAspectRatio:false,
-        plugins:{
-          zoom:{ pan:{enabled:true,mode:'xy'}, zoom:{wheel:{enabled:true},mode:'xy'} },
-          tooltip:{ callbacks:{ label:ctx=>`${ctx.dataset.label}: I=${ctx.raw.x.toFixed(1)}A, t=${ctx.raw.y.toFixed(3)}s` }},
-          legend:{ position:'bottom' }
-        },
-        scales:{
-          x:{ type:'logarithmic', min:10, max:20000, title:{display:true,text:'전류 (A)'} },
-          y:{ type:'logarithmic', min:0.01, max:100, title:{display:true,text:'동작시간 (s)'} }
-        }
-      }
-    });
-    setStatus('협조 검토 완료', 'ok');
-  }).catch(e => setStatus('오류: ' + e.message, 'err'));
 }
 </script>
 </body>
