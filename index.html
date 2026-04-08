@@ -160,17 +160,15 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
       <!-- 그래프 축 범위 -->
       <div class="panel">
         <div class="panel-title">그래프 범위</div>
-        <div style="font-size:11px;opacity:.55;margin-bottom:6px;">X축 (전류, A)</div>
-        <div class="range-group" style="margin-bottom:8px;">
-          <input id="xMin" type="number" value="10" placeholder="최솟값">
-          <span>~</span>
-          <input id="xMax" type="number" value="10000" placeholder="최댓값">
-        </div>
-        <div style="font-size:11px;opacity:.55;margin-bottom:6px;">Y축 (시간, s)</div>
-        <div class="range-group">
-          <input id="yMin" type="number" value="0.01" step="0.01" placeholder="최솟값">
-          <span>~</span>
-          <input id="yMax" type="number" value="100" placeholder="최댓값">
+        <div style="display:grid;grid-template-columns:28px 1fr 10px 1fr;align-items:center;gap:4px;">
+          <span style="font-size:11px;opacity:.55;">X(A)</span>
+          <input id="xMin" type="number" value="10" style="padding:4px 5px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:100%;">
+          <span style="font-size:11px;opacity:.4;text-align:center;">~</span>
+          <input id="xMax" type="number" value="10000" style="padding:4px 5px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:100%;">
+          <span style="font-size:11px;opacity:.55;">Y(s)</span>
+          <input id="yMin" type="number" value="0.01" step="0.01" style="padding:4px 5px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:100%;">
+          <span style="font-size:11px;opacity:.4;text-align:center;">~</span>
+          <input id="yMax" type="number" value="100" style="padding:4px 5px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:100%;">
         </div>
       </div>
 
