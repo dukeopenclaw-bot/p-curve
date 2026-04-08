@@ -281,16 +281,16 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
         <thead>
           <tr>
             <th>Element</th><th>Stage</th><th>Enable</th><th>CurveType</th>
-            <th>Is</th><th>TMS</th><th>t (DT)</th><th>t_min</th><th>t_max</th><th></th>
+            <th>Is</th><th>TMS</th><th>t (DT)</th><th>t_min</th><th>t_max</th><th></th><th></th>
           </tr>
         </thead>
         <tbody id="settingTableBody"></tbody>
       </table>
     </div>
 
-    <!-- 스테이지 추가 폼 -->
+    <!-- 스테이지 추가/수정 폼 -->
     <div id="addSettingForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-      <div class="section-title">스테이지 추가</div>
+      <div class="section-title" id="settingFormTitle">스테이지 추가</div>
       <div class="field-row">
         <div class="field">
           <label>Element</label>
@@ -322,7 +322,7 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
       </div>
       <div class="btn-row">
         <button class="btn secondary sm" onclick="closeAddSetting()">취소</button>
-        <button class="btn sm" onclick="saveSetting()">추가</button>
+        <button class="btn sm" id="settingFormBtn" onclick="saveSetting()">추가</button>
       </div>
     </div>
 
@@ -644,29 +644,71 @@ function renderSettingTable() {
   const rows = allSettings.filter(s => s.RelayTag === settingTag);
   const tbody = document.getElementById('settingTableBody');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;opacity:.5;padding:12px">설정 없음</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;opacity:.5;padding:12px">설정 없음</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(s => `
     <tr>
       <td>${s.Element}</td>
       <td>${s.Stage}</td>
-      <td>${s.Enable === true || s.Enable === 'TRUE' ? '✅' : '❌'}</td>
+      <td style="cursor:pointer" onclick="toggleEnable('${s.SettingID}')">${s.Enable === true || s.Enable === 'TRUE' ? '✅' : '❌'}</td>
       <td>${s.CurveType}</td>
       <td>${s.Is}</td>
       <td>${s.TMS||''}</td>
       <td>${s.t||''}</td>
       <td>${s.t_min||''}</td>
       <td>${s.t_max||''}</td>
+      <td><button class="btn secondary sm" onclick="editSetting('${s.SettingID}')">수정</button></td>
       <td><button class="btn danger sm" onclick="deleteSetting('${s.SettingID}')">✕</button></td>
     </tr>`).join('');
 }
 
+let editingSettingId = null;
+
 function openAddSetting() {
+  editingSettingId = null;
+  document.getElementById('settingFormTitle').textContent = '스테이지 추가';
+  document.getElementById('settingFormBtn').textContent = '추가';
+  document.getElementById('s_elem').value  = 'PHPTOC';
+  document.getElementById('s_stage').value = '1';
+  document.getElementById('s_curve').value = 'IEC NI';
+  ['s_is','s_tms','s_t','s_tmin','s_tmax'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('addSettingForm').style.display = 'block';
 }
+
+function editSetting(id) {
+  const s = allSettings.find(x => String(x.SettingID) === String(id));
+  if (!s) return;
+  editingSettingId = id;
+  document.getElementById('settingFormTitle').textContent = '스테이지 수정';
+  document.getElementById('settingFormBtn').textContent = '저장';
+  document.getElementById('s_elem').value  = s.Element  || 'PHPTOC';
+  document.getElementById('s_stage').value = s.Stage    || 1;
+  document.getElementById('s_curve').value = s.CurveType|| 'IEC NI';
+  document.getElementById('s_is').value    = s.Is       || '';
+  document.getElementById('s_tms').value   = s.TMS      || '';
+  document.getElementById('s_t').value     = s.t        || '';
+  document.getElementById('s_tmin').value  = s.t_min    || '';
+  document.getElementById('s_tmax').value  = s.t_max    || '';
+  document.getElementById('addSettingForm').style.display = 'block';
+  document.getElementById('addSettingForm').scrollIntoView({ behavior:'smooth' });
+}
+
 function closeAddSetting() {
   document.getElementById('addSettingForm').style.display = 'none';
+  editingSettingId = null;
+}
+
+function toggleEnable(id) {
+  const s = allSettings.find(x => String(x.SettingID) === String(id));
+  if (!s) return;
+  const cur = s.Enable === true || s.Enable === 'TRUE';
+  const data = { ...s, Enable: !cur };
+  post({ action:'saveSetting', data })
+    .then(res => {
+      if (res.error) { alert('오류: ' + res.error); return; }
+      loadSettings().then(() => renderSettingTable());
+    });
 }
 
 function saveSetting() {
@@ -674,8 +716,11 @@ function saveSetting() {
   const stage = document.getElementById('s_stage').value;
   if (!settingTag || !elem || !stage) { alert('필수 항목을 입력하세요'); return; }
 
+  // 수정 모드: 기존 SettingID 유지 / 추가 모드: 새 ID 생성
+  const settingId = editingSettingId || (settingTag + '_' + elem + '_' + stage);
+
   const data = {
-    SettingID : settingTag + '_' + elem + '_' + stage,
+    SettingID : settingId,
     RelayTag  : settingTag,
     Element   : elem,
     Stage     : Number(stage),
