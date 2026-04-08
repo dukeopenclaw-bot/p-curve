@@ -170,6 +170,19 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
           <span style="font-size:11px;opacity:.4;text-align:center;">~</span>
           <input id="yMax" type="number" value="100" style="padding:4px 5px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:100%;">
         </div>
+
+        <!-- 기준 전압 -->
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+          <div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:4px;">
+            <span style="font-size:11px;opacity:.55;white-space:nowrap;">기준전압</span>
+            <input id="refVoltage" type="number" step="0.1" placeholder="미입력 시 환산 없음"
+              style="padding:4px 5px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:100%;">
+            <span style="font-size:11px;opacity:.55;">kV</span>
+          </div>
+          <div style="font-size:10px;opacity:.45;margin-top:3px;">
+            입력 시 각 릴레이 전압 기준으로 전류 환산
+          </div>
+        </div>
       </div>
 
       <!-- 그래프 그리기 -->
@@ -451,22 +464,42 @@ function drawSelected() {
 
   if (!checked.length) { alert('릴레이를 하나 이상 선택하세요'); return; }
 
+  const refV = parseFloat(document.getElementById('refVoltage').value);
   setStatus('계산 중...', 'loading');
-  document.getElementById('chartTitle').textContent = checked.join(', ');
+  document.getElementById('chartTitle').textContent =
+    checked.join(', ') + (refV ? `  (기준 ${refV}kV)` : '');
 
   api({ type:'curveCompare', relays: checked.join(',') })
     .then(curves => {
       if (!Array.isArray(curves) || !curves.length) {
         setStatus('곡선 없음', 'err'); return;
       }
+
+      // 전압 환산: I_기준 = I_릴레이 × (V_릴레이 / V_기준)
+      if (refV && refV > 0) {
+        curves = curves.map(c => {
+          const relayData = allRelays.find(r => r.RelayTag === c.relay);
+          const relayV = relayData ? parseFloat(relayData.VoltageLevel) : 0;
+          const ratio = (relayV && relayV !== refV) ? relayV / refV : 1;
+          return {
+            ...c,
+            label: c.relay + ' ' + c.element + ' S' + c.stage +
+                   ' (' + c.curveType + ')' +
+                   (ratio !== 1 ? ` @${relayV}kV` : ''),
+            data: c.data.map(p => ({ I: p.I * ratio, t: p.t }))
+          };
+        });
+      }
+
       const graph = {
         X_Min: document.getElementById('xMin').value || 10,
         X_Max: document.getElementById('xMax').value || 10000,
         Y_Min: document.getElementById('yMin').value || 0.01,
         Y_Max: document.getElementById('yMax').value || 100,
+        refVoltage: refV || null,
       };
       renderChart(curves, graph);
-      setStatus(`${curves.length}개 곡선`, 'ok');
+      setStatus(`${curves.length}개 곡선` + (refV ? ` · 기준 ${refV}kV` : ''), 'ok');
     })
     .catch(e => setStatus('오류: ' + e.message, 'err'));
 }
@@ -503,7 +536,7 @@ function renderChart(curves, graph) {
       },
       scales: {
         x: { type:'logarithmic', min:Number(graph.X_Min), max:Number(graph.X_Max),
-             title:{ display:true, text:'전류 (A)' } },
+             title:{ display:true, text: graph.refVoltage ? `전류 (A) @ ${graph.refVoltage}kV` : '전류 (A)' } },
         y: { type:'logarithmic', min:Number(graph.Y_Min), max:Number(graph.Y_Max),
              title:{ display:true, text:'동작시간 (s)' } }
       }
