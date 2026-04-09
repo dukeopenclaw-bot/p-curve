@@ -77,7 +77,7 @@ function calculateCurveFull(setting, relay, model) {
 
   let result = [];
 
-  for (let I = 10; I <= 20000; I *= 1.2) {
+  for (let I = 1; I <= 20000; I *= 1.05) {
     let multiple;
     if (model.IsUnit === "pu") {
       multiple = (I / CT_ratio) / (Is * In);
@@ -97,8 +97,8 @@ function calculateCurveFull(setting, relay, model) {
     if (setting.t_min && Number(setting.t_min) > 0) t = Math.max(t, Number(setting.t_min));
     if (setting.t_max && Number(setting.t_max) > 0) t = Math.min(t, Number(setting.t_max));
 
-    if (t <= 0) continue;
-    result.push({ I: I, t: t });
+    if (t <= 0 || t > 10000 || !isFinite(t)) continue;
+    result.push({ I: Math.round(I * 100) / 100, t: Math.round(t * 10000) / 10000 });
   }
 
   return result;
