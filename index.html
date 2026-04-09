@@ -632,7 +632,7 @@ function clipToYMax(rawData, yMax) {
   const result = [];
   for (let i = 0; i < rawData.length; i++) {
     const p = rawData[i];
-    if (!p || p.y == null) { result.push(p); continue; }
+    if (!p || p.x == null || p.y == null) { result.push({ x: null, y: null }); continue; }
 
     if (p.y <= yMax) {
       // 이전 점이 yMax 위에 있었으면 경계점 보간해서 진입점 추가
@@ -656,7 +656,7 @@ function clipToYMax(rawData, yMax) {
         if (p0 && p0.y != null && p0.y <= yMax) {
           // 직전 점이 범위 안이었으면 경계점 추가
           result.push({ x: p.x, y: yMax });
-          result.push(null); // 선 끊기
+          result.push({ x: null, y: null }); // 선 끊기
         }
       }
     }
