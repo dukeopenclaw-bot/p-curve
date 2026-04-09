@@ -212,7 +212,13 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
     </div>
     <!-- 커서 컨트롤 바 -->
     <div class="cursor-bar" id="cursorBar" style="display:none;">
-      <span class="cursor-x" id="cursorX">— A</span>
+      <input id="cursorXInput" type="number" step="any" placeholder="A 입력"
+        style="width:88px;padding:4px 6px;font-size:12px;font-weight:700;
+               border:1px solid var(--border);border-radius:4px;
+               background:var(--bg);color:var(--text);"
+        oninput="onCursorXInput(this.value)"
+        onkeydown="if(event.key==='Enter') onCursorXInput(this.value)">
+      <span style="font-size:11px;opacity:.5;">A</span>
       <button class="btn secondary sm" onclick="moveCursor(-5)">◀◀</button>
       <button class="btn secondary sm" onclick="moveCursor(-1)">◀</button>
       <input id="cursorSlider" type="range" min="0" max="100" value="50"
@@ -709,6 +715,19 @@ function applyCursorStep() {
   if (chartInst) chartInst.draw();
 }
 
+function onCursorXInput(val) {
+  const v = parseFloat(val);
+  if (!v || v <= 0) return;
+  cursorX = Math.max(cursorXMin, Math.min(cursorXMax, v));
+  // 슬라이더 동기화
+  const logMin = Math.log(cursorXMin), logMax = Math.log(cursorXMax);
+  cursorStep = Math.round((Math.log(cursorX) - logMin) / (logMax - logMin) * 100);
+  cursorStep = Math.max(0, Math.min(100, cursorStep));
+  document.getElementById('cursorSlider').value = cursorStep;
+  if (chartInst) chartInst.draw();
+  updateCursorDisplay(true); // input은 이미 입력됐으므로 덮어쓰지 않음
+}
+
 function toggleCursor() {
   cursorOn = !cursorOn;
   document.querySelector('#cursorBar button:last-of-type').textContent =
@@ -717,9 +736,11 @@ function toggleCursor() {
   updateCursorDisplay();
 }
 
-function updateCursorDisplay() {
-  document.getElementById('cursorX').textContent =
-    cursorOn && cursorX ? cursorX.toFixed(1) + ' A' : '— A';
+function updateCursorDisplay(skipInput) {
+  if (!skipInput) {
+    const inp = document.getElementById('cursorXInput');
+    if (inp) inp.value = cursorOn && cursorX ? cursorX.toFixed(1) : '';
+  }
 
   const listEl = document.getElementById('cursorValList');
   if (!cursorOn || !chartInst || cursorX === null) {
