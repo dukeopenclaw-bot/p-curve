@@ -194,6 +194,11 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
             <option value="10000">×10k (A)</option>
           </select>
         </div>
+        <!-- 축 고정 -->
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <button id="lockXBtn" class="btn sm secondary" onclick="toggleAxisLock('x')" style="flex:1;">X 🔓 이동</button>
+          <button id="lockYBtn" class="btn sm success"   onclick="toggleAxisLock('y')" style="flex:1;">Y 🔒 고정</button>
+        </div>
 
         <!-- 기준 전압 -->
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
@@ -422,6 +427,8 @@ let cursorXMax    = 10000;
 let cursorStep    = 0;      // slider position 0~100
 let autoRangeOn   = true;   // 그래프 범위 자동/수동
 let xMultiplier   = 1;      // X축 표시 배율
+let lockX         = false;  // X축 고정
+let lockY         = true;   // Y축 고정 (기본)
 
 // ══ INIT ═════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
@@ -726,8 +733,8 @@ function renderChart(curves, graph) {
       plugins: {
         cursorLine: {},
         zoom: {
-          pan : { enabled:true, mode:'xy' },
-          zoom: { wheel:{ enabled:true }, pinch:{ enabled:true }, mode:'xy' },
+          pan : { enabled:true, mode:'x' },
+          zoom: { wheel:{ enabled:true }, pinch:{ enabled:true }, mode:'x' },
         },
         tooltip: {
           callbacks: { label: ctx =>
@@ -769,6 +776,38 @@ function renderChart(curves, graph) {
 }
 
 function resetZoom() { if (chartInst) chartInst.resetZoom(); }
+
+function toggleAxisLock(axis) {
+  if (axis === 'x') lockX = !lockX;
+  else              lockY = !lockY;
+
+  const xBtn = document.getElementById('lockXBtn');
+  const yBtn = document.getElementById('lockYBtn');
+  xBtn.textContent = lockX ? 'X 🔒 고정' : 'X 🔓 이동';
+  xBtn.className   = lockX ? 'btn sm success' : 'btn sm secondary';
+  yBtn.textContent = lockY ? 'Y 🔒 고정' : 'Y 🔓 이동';
+  yBtn.className   = lockY ? 'btn sm success' : 'btn sm secondary';
+
+  updatePanZoomMode();
+}
+
+function updatePanZoomMode() {
+  if (!chartInst) return;
+  const z = chartInst.options.plugins.zoom;
+  if (lockX && lockY) {
+    z.pan.enabled = false;
+    z.zoom.wheel.enabled = false;
+    z.zoom.pinch.enabled = false;
+  } else {
+    const mode = lockX ? 'y' : lockY ? 'x' : 'xy';
+    z.pan.enabled = true;
+    z.pan.mode    = mode;
+    z.zoom.wheel.enabled = true;
+    z.zoom.pinch.enabled = true;
+    z.zoom.mode   = mode;
+  }
+  chartInst.update('none');
+}
 
 function applyXMultiplier() {
   xMultiplier = Number(document.getElementById('xMultiplierSel').value) || 1;
