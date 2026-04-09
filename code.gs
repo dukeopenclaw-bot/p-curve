@@ -97,7 +97,8 @@ function calculateCurveFull(setting, relay, model) {
     if (setting.t_min && Number(setting.t_min) > 0) t = Math.max(t, Number(setting.t_min));
     if (setting.t_max && Number(setting.t_max) > 0) t = Math.min(t, Number(setting.t_max));
 
-    if (t <= 0 || t > 10000 || !isFinite(t)) continue;
+    if (!isFinite(t) || t <= 0) continue;
+    if (t > 10000) t = 10000;  // 상한 클램핑 (제거 아님)
     result.push({ I: Math.round(I * 100) / 100, t: Math.round(t * 10000) / 10000 });
   }
 
