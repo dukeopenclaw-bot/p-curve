@@ -86,7 +86,7 @@ function calculateCurveFull(setting, relay, model) {
   result.push({ I: Math.round(pickupI * 100) / 100, t: 10000 });
   result.push({ I: Math.round(pickupI * 100) / 100, t: 1e12 });
 
-  for (let I = 1; I <= 100000; I *= 1.05) {
+  for (let I = 1; I <= 20000; I *= 1.05) {
     let multiple;
     if (model.IsUnit === "pu") {
       multiple = (I / CT_ratio) / (Is * In);
