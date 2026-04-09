@@ -82,7 +82,11 @@ function calculateCurveFull(setting, relay, model) {
 
   let result = [];
 
-  for (let I = 1; I <= 20000; I *= 1.05) {
+  // 픽업 수직선: 커브 시작점에서 Y축 최하단까지 수직선 데이터로 포함
+  result.push({ I: Math.round(pickupI * 100) / 100, t: 0.001 });
+  result.push({ I: Math.round(pickupI * 100) / 100, t: 10000 });
+
+  for (let I = 1; I <= 100000; I *= 1.05) {
     let multiple;
     if (model.IsUnit === "pu") {
       multiple = (I / CT_ratio) / (Is * In);
