@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<title>TCC Tool v2.2</title>
+<title>TCC Tool v2.3</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
@@ -135,7 +135,7 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
 <!-- ── TOPBAR ── -->
 <div class="topbar">
   <h1>⚡ TCC Tool</h1>
-  <span class="badge">v2.2.0</span>
+  <span class="badge">v2.3.0</span>
   <div id="statusBar"></div>
   <div class="topbar-right">
     <button class="icon-btn" onclick="openCfg()">⚙ 설정</button>
@@ -625,11 +625,37 @@ function interpolateLog(data, x) {
   return Math.exp(ly1 + (ly2 - ly1) * (lx - lx1) / (lx2 - lx1));
 }
 
+// Y_Max 경계에서 로그-로그 보간으로 클리핑
+function clipToYMax(rawData, yMax) {
+  // rawData: [{x, y}] sorted by increasing x (decreasing y for IDMT)
+  const result = [];
+  for (let i = 0; i < rawData.length; i++) {
+    const p = rawData[i];
+    if (p.y <= yMax) {
+      // 이전 점이 yMax 위에 있었으면 경계점 보간 추가
+      if (result.length === 0 && i > 0) {
+        const p0 = rawData[i - 1];
+        const lx0 = Math.log(p0.x), ly0 = Math.log(p0.y);
+        const lx1 = Math.log(p.x),  ly1 = Math.log(p.y);
+        const lyM = Math.log(yMax);
+        if (ly1 !== ly0) {
+          const lxB = lx0 + (lx1 - lx0) * (lyM - ly0) / (ly1 - ly0);
+          result.push({ x: Math.exp(lxB), y: yMax });
+        }
+      }
+      result.push(p);
+    }
+    // yMax 초과 점은 버림 (뒷부분이 올라가는 경우 없으므로 break 불필요)
+  }
+  return result;
+}
+
 function renderChart(curves, graph) {
   const canvas = document.getElementById('chart');
+  const yMax   = Number(graph.Y_Max) || 100;
   const datasets = curves.map(c => ({
     label          : c.relay + ' ' + c.element + ' S' + c.stage + ' (' + c.curveType + ')',
-    data           : c.data.map(p => ({ x: p.I, y: p.t })),
+    data           : clipToYMax(c.data.map(p => ({ x: p.I, y: p.t })), yMax),
     borderColor    : c.color || '#555',
     backgroundColor: (c.color || '#555') + '22',
     pointRadius    : 0,
