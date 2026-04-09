@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<title>TCC Tool v2.5</title>
+<title>TCC Tool v2.6</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
@@ -135,7 +135,7 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
 <!-- ── TOPBAR ── -->
 <div class="topbar">
   <h1>⚡ TCC Tool</h1>
-  <span class="badge">v2.5.0</span>
+  <span class="badge">v2.6.0</span>
   <div id="statusBar"></div>
   <div class="topbar-right">
     <button class="icon-btn" onclick="openCfg()">⚙ 설정</button>
@@ -168,8 +168,11 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
 
       <!-- 그래프 축 범위 -->
       <div class="panel">
-        <div class="panel-title">그래프 범위</div>
-        <div style="display:grid;grid-template-columns:28px 1fr 10px 1fr;align-items:center;gap:4px;">
+        <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>그래프 범위</span>
+          <button id="autoRangeBtn" class="btn sm success" onclick="toggleAutoRange()">자동</button>
+        </div>
+        <div id="rangeInputs" style="display:grid;grid-template-columns:28px 1fr 10px 1fr;align-items:center;gap:4px;opacity:.4;pointer-events:none;">
           <span style="font-size:11px;opacity:.55;">X(A)</span>
           <input id="xMin" type="number" value="10" style="padding:4px 5px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:100%;">
           <span style="font-size:11px;opacity:.4;text-align:center;">~</span>
@@ -405,6 +408,7 @@ let cursorX       = null;   // current cursor value in A
 let cursorXMin    = 10;
 let cursorXMax    = 10000;
 let cursorStep    = 0;      // slider position 0~100
+let autoRangeOn   = true;   // 그래프 범위 자동/수동
 
 // ══ INIT ═════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
@@ -539,6 +543,14 @@ function drawSelected() {
             data: c.data.map(p => ({ I: p.I * ratio, t: p.t }))
           };
         });
+      }
+
+      if (autoRangeOn) {
+        const r = calcAutoRange(curves);
+        document.getElementById('xMin').value = r.xMin;
+        document.getElementById('xMax').value = r.xMax;
+        document.getElementById('yMin').value = r.yMin;
+        document.getElementById('yMax').value = r.yMax;
       }
 
       const graph = {
@@ -738,6 +750,40 @@ function renderChart(curves, graph) {
 }
 
 function resetZoom() { if (chartInst) chartInst.resetZoom(); }
+
+function toggleAutoRange() {
+  autoRangeOn = !autoRangeOn;
+  const btn = document.getElementById('autoRangeBtn');
+  const wrap = document.getElementById('rangeInputs');
+  btn.textContent  = autoRangeOn ? '자동' : '수동';
+  btn.className    = autoRangeOn ? 'btn sm success' : 'btn sm secondary';
+  wrap.style.opacity      = autoRangeOn ? '.4' : '1';
+  wrap.style.pointerEvents = autoRangeOn ? 'none' : 'auto';
+}
+
+// 데이터에서 자동으로 축 범위 계산 (로그 한 decade 여유)
+function calcAutoRange(curves) {
+  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+  curves.forEach(c => {
+    (c.data || []).forEach(p => {
+      if (!p || p.I <= 0 || p.t <= 0 || p.t >= 1e6) return;
+      if (p.I < xMin) xMin = p.I;
+      if (p.I > xMax) xMax = p.I;
+      if (p.t < yMin) yMin = p.t;
+      if (p.t > yMax) yMax = p.t;
+    });
+  });
+  if (!isFinite(xMin)) return { xMin: 10, xMax: 10000, yMin: 0.01, yMax: 100 };
+  // 로그 스케일 한 decade 여유
+  const dec = v => Math.pow(10, Math.floor(Math.log10(v)));
+  const decUp = v => Math.pow(10, Math.ceil(Math.log10(v)));
+  return {
+    xMin: dec(xMin),
+    xMax: decUp(xMax),
+    yMin: dec(yMin),
+    yMax: decUp(yMax),
+  };
+}
 
 function fitChart() {
   if (!chartInst) return;
