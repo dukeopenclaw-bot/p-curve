@@ -685,6 +685,8 @@ function renderChart(curves, graph) {
   cursorX    = Math.exp(Math.log(cursorXMin) + (Math.log(cursorXMax) - Math.log(cursorXMin)) * 0.5);
 
   if (chartInst) chartInst.destroy();
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
   Chart.register(cursorPlugin);
   chartInst = new Chart(canvas, {
     type: 'line',
