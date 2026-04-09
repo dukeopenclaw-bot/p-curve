@@ -75,16 +75,12 @@ function calculateCurveFull(setting, relay, model) {
                    (Number(relay.CT_Primary) / Number(relay.CT_Secondary));
   const In = Number(relay.In) || 1;
 
-  let result = [];
-
   // 픽업 1차 전류 계산
   const pickupI = (model.IsUnit === "pu")
     ? Is * In * CT_ratio
     : Is * CT_ratio;
 
-  // 픽업 이하 구간: 부동작 영역 → 그래프 상단(t=10000)에 수평선으로 표시
-  result.push({ I: 1, t: 10000 });
-  result.push({ I: Math.round(pickupI * 100) / 100, t: 10000 });
+  let result = [];
 
   for (let I = 1; I <= 20000; I *= 1.05) {
     let multiple;
@@ -111,7 +107,7 @@ function calculateCurveFull(setting, relay, model) {
     result.push({ I: Math.round(I * 100) / 100, t: Math.round(t * 10000) / 10000 });
   }
 
-  return result;
+  return { data: result, pickupI: Math.round(pickupI * 100) / 100 };
 }
 
 
@@ -135,8 +131,8 @@ function getRelayCurveFull(relayTag) {
 
   let curves = [];
   relaySettings.forEach(s => {
-    const data = calculateCurveFull(s, relay, model);
-    if (!data) return;
+    const result = calculateCurveFull(s, relay, model);
+    if (!result) return;
     curves.push({
       relay:     relayTag,
       model:     model.Model,
@@ -144,7 +140,8 @@ function getRelayCurveFull(relayTag) {
       stage:     s.Stage,
       curveType: s.CurveType,
       color:     relay.Color || "#333333",
-      data:      data
+      pickupI:   result.pickupI,
+      data:      result.data
     });
   });
 

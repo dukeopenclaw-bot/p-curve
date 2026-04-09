@@ -404,6 +404,7 @@ let cursorX       = null;   // current cursor value in A
 let cursorXMin    = 10;
 let cursorXMax    = 10000;
 let cursorStep    = 0;      // slider position 0~100
+let pickupLines   = [];     // [{ I, color }] 픽업 수직선
 
 // ══ INIT ═════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
@@ -531,6 +532,7 @@ function drawSelected() {
           const ratio = (relayV && relayV !== refV) ? relayV / refV : 1;
           return {
             ...c,
+            pickupI: (c.pickupI || 0) * ratio,
             label: c.relay + ' ' + c.element + ' S' + c.stage +
                    ' (' + c.curveType + ')' +
                    (ratio !== 1 ? ` @${relayV}kV` : ''),
@@ -538,6 +540,11 @@ function drawSelected() {
           };
         });
       }
+
+      // 픽업 수직선 목록
+      pickupLines = curves
+        .filter(c => c.pickupI > 0)
+        .map(c => ({ I: c.pickupI, color: c.color || '#555' }));
 
       const graph = {
         X_Min: document.getElementById('xMin').value || 10,
@@ -556,17 +563,34 @@ function drawSelected() {
 const cursorPlugin = {
   id: 'cursorLine',
   afterDraw(chart) {
-    if (!cursorOn || cursorX === null) return;
     const xScale = chart.scales.x;
     const yScale = chart.scales.y;
     if (!xScale || !yScale) return;
 
+    const ctx = chart.ctx;
+
+    // 픽업 수직선 (각 곡선 색상, 점선)
+    pickupLines.forEach(pl => {
+      const xPx = xScale.getPixelForValue(pl.I);
+      if (xPx < xScale.left || xPx > xScale.right) return;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(xPx, yScale.top);
+      ctx.lineTo(xPx, yScale.bottom);
+      ctx.strokeStyle = pl.color;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.globalAlpha = 0.6;
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    if (!cursorOn || cursorX === null) return;
+
     const xPx = xScale.getPixelForValue(cursorX);
     if (xPx < xScale.left || xPx > xScale.right) return;
 
-    const ctx = chart.ctx;
-
-    // 세로선
+    // 커서 세로선
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(xPx, yScale.top);
