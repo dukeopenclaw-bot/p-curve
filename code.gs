@@ -77,6 +77,15 @@ function calculateCurveFull(setting, relay, model) {
 
   let result = [];
 
+  // 픽업 1차 전류 계산
+  const pickupI = (model.IsUnit === "pu")
+    ? Is * In * CT_ratio
+    : Is * CT_ratio;
+
+  // 픽업 이하 구간: 부동작 영역 → 그래프 상단(t=10000)에 수평선으로 표시
+  result.push({ I: 1, t: 10000 });
+  result.push({ I: Math.round(pickupI * 100) / 100, t: 10000 });
+
   for (let I = 1; I <= 20000; I *= 1.05) {
     let multiple;
     if (model.IsUnit === "pu") {
