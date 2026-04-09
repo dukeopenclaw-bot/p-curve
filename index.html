@@ -182,6 +182,18 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
           <span style="font-size:11px;opacity:.4;text-align:center;">~</span>
           <input id="yMax" type="number" value="100" style="padding:4px 5px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:100%;">
         </div>
+        <!-- X축 배율 -->
+        <div style="margin-top:6px;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;opacity:.55;white-space:nowrap;">X 배율</span>
+          <select id="xMultiplierSel" onchange="applyXMultiplier()"
+            style="flex:1;padding:3px 5px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);">
+            <option value="1">×1 (A)</option>
+            <option value="10">×10 (A)</option>
+            <option value="100">×100 (A)</option>
+            <option value="1000">×1k (A)</option>
+            <option value="10000">×10k (A)</option>
+          </select>
+        </div>
 
         <!-- 기준 전압 -->
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
@@ -409,6 +421,7 @@ let cursorXMin    = 10;
 let cursorXMax    = 10000;
 let cursorStep    = 0;      // slider position 0~100
 let autoRangeOn   = true;   // 그래프 범위 자동/수동
+let xMultiplier   = 1;      // X축 표시 배율
 
 // ══ INIT ═════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
@@ -727,10 +740,10 @@ function renderChart(curves, graph) {
           type: 'logarithmic',
           min: Number(graph.X_Min),
           max: Number(graph.X_Max),
-          title: { display:true, text: graph.refVoltage ? `전류 (A) @ ${graph.refVoltage}kV` : '전류 (A)' },
+          title: { display:true, text: graph.refVoltage ? `전류 (×${xMultiplier} A) @ ${graph.refVoltage}kV` : xAxisTitle() },
           ticks: {
             maxRotation:0, autoSkip:true, maxTicksLimit:8,
-            callback: v => v >= 1e6 ? (v/1e6)+'M' : v >= 1e3 ? (v/1e3)+'k' : v
+            callback: makeXTick()
           },
           afterFit(scale) { scale.paddingBottom = 4; }
         },
@@ -756,6 +769,28 @@ function renderChart(curves, graph) {
 }
 
 function resetZoom() { if (chartInst) chartInst.resetZoom(); }
+
+function applyXMultiplier() {
+  xMultiplier = Number(document.getElementById('xMultiplierSel').value) || 1;
+  if (!chartInst) return;
+  chartInst.options.scales.x.ticks.callback = makeXTick();
+  chartInst.options.scales.x.title.text = xAxisTitle();
+  chartInst.update();
+}
+
+function makeXTick() {
+  return v => {
+    const s = v / xMultiplier;
+    if (s >= 1e6) return (s/1e6) + 'M';
+    if (s >= 1e3) return (s/1e3) + 'k';
+    return s;
+  };
+}
+
+function xAxisTitle() {
+  const base = xMultiplier === 1 ? '전류 (A)' : `전류 (×${xMultiplier} A)`;
+  return base;
+}
 
 function toggleAutoRange() {
   autoRangeOn = !autoRangeOn;
