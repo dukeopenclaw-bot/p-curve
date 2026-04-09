@@ -728,7 +728,10 @@ function renderChart(curves, graph) {
           min: Number(graph.X_Min),
           max: Number(graph.X_Max),
           title: { display:true, text: graph.refVoltage ? `전류 (A) @ ${graph.refVoltage}kV` : '전류 (A)' },
-          ticks: { maxRotation:0, autoSkip:true, maxTicksLimit:8 },
+          ticks: {
+            maxRotation:0, autoSkip:true, maxTicksLimit:8,
+            callback: v => v >= 1e6 ? (v/1e6)+'M' : v >= 1e3 ? (v/1e3)+'k' : v
+          },
           afterFit(scale) { scale.paddingBottom = 4; }
         },
         y: {
@@ -736,7 +739,10 @@ function renderChart(curves, graph) {
           min: Number(graph.Y_Min),
           max: Number(graph.Y_Max),
           title: { display:true, text:'동작시간 (s)' },
-          ticks: { maxTicksLimit:8 }
+          ticks: {
+            maxTicksLimit:8,
+            callback: v => v >= 1e4 ? (v/1e3)+'ks' : v
+          }
         }
       }
     }
