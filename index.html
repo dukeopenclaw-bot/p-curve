@@ -614,6 +614,7 @@ function interpolateLog(data, x) {
   if (!data || data.length < 2) return null;
   let p1 = null, p2 = null;
   for (let i = 0; i < data.length - 1; i++) {
+    if (!data[i] || !data[i+1] || data[i].x == null || data[i+1].x == null) continue;
     if (data[i].x <= x && data[i + 1].x >= x) {
       p1 = data[i]; p2 = data[i + 1]; break;
     }
@@ -628,25 +629,37 @@ function interpolateLog(data, x) {
 
 // Y_Max 경계에서 로그-로그 보간으로 클리핑
 function clipToYMax(rawData, yMax) {
-  // rawData: [{x, y}] sorted by increasing x (decreasing y for IDMT)
   const result = [];
   for (let i = 0; i < rawData.length; i++) {
     const p = rawData[i];
+    if (!p || p.y == null) { result.push(p); continue; }
+
     if (p.y <= yMax) {
-      // 이전 점이 yMax 위에 있었으면 경계점 보간 추가
+      // 이전 점이 yMax 위에 있었으면 경계점 보간해서 진입점 추가
       if (result.length === 0 && i > 0) {
         const p0 = rawData[i - 1];
-        const lx0 = Math.log(p0.x), ly0 = Math.log(p0.y);
-        const lx1 = Math.log(p.x),  ly1 = Math.log(p.y);
-        const lyM = Math.log(yMax);
-        if (ly1 !== ly0) {
-          const lxB = lx0 + (lx1 - lx0) * (lyM - ly0) / (ly1 - ly0);
-          result.push({ x: Math.exp(lxB), y: yMax });
+        if (p0 && p0.y != null && p0.x > 0 && p.x > 0) {
+          const lx0 = Math.log(p0.x), ly0 = Math.log(p0.y);
+          const lx1 = Math.log(p.x),  ly1 = Math.log(p.y);
+          const lyM = Math.log(yMax);
+          if (ly1 !== ly0) {
+            const lxB = lx0 + (lx1 - lx0) * (lyM - ly0) / (ly1 - ly0);
+            result.push({ x: Math.exp(lxB), y: yMax });
+          }
         }
       }
       result.push(p);
+    } else {
+      // yMax 위로 나가는 경우: 경계점 추가 후 null 브레이크로 선 끊기
+      if (result.length > 0) {
+        const p0 = rawData[i - 1];
+        if (p0 && p0.y != null && p0.y <= yMax) {
+          // 직전 점이 범위 안이었으면 경계점 추가
+          result.push({ x: p.x, y: yMax });
+          result.push(null); // 선 끊기
+        }
+      }
     }
-    // yMax 초과 점은 버림 (뒷부분이 올라가는 경우 없으므로 break 불필요)
   }
   return result;
 }
@@ -662,6 +675,7 @@ function renderChart(curves, graph) {
     pointRadius    : 0,
     borderWidth    : 2,
     tension        : 0,
+    spanGaps       : false,
   }));
 
   // 커서 범위 초기화

@@ -82,9 +82,9 @@ function calculateCurveFull(setting, relay, model) {
 
   let result = [];
 
-  // 픽업 수직선: 커브 시작점에서 Y축 최하단까지 수직선 데이터로 포함
-  result.push({ I: Math.round(pickupI * 100) / 100, t: 0.001 });
+  // 픽업 수직선: 커브 시작점(t=10000)에서 위로 연장
   result.push({ I: Math.round(pickupI * 100) / 100, t: 10000 });
+  result.push({ I: Math.round(pickupI * 100) / 100, t: 1e12 });
 
   for (let I = 1; I <= 100000; I *= 1.05) {
     let multiple;
