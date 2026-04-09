@@ -97,8 +97,17 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
 .chart-toolbar { display:flex; align-items:center; gap:8px; padding:8px 12px;
                  border-bottom:1px solid var(--border); flex-shrink:0; flex-wrap:wrap; }
 .chart-hint { font-size:11px; opacity:.4; margin-left:auto; }
-.chart-area { flex:1; position:relative; padding:10px; }
-#chart { width:100% !important; height:100% !important; }
+.chart-area { flex:1; position:relative; min-height:0; padding:8px 8px 0; }
+#chart { width:100% !important; height:100% !important; display:block; }
+
+/* ── CURSOR BAR ── */
+.cursor-bar { flex-shrink:0; display:flex; align-items:center; gap:6px;
+              padding:6px 12px; border-top:1px solid var(--border);
+              background:var(--card); flex-wrap:wrap; }
+.cursor-val-list { display:flex; gap:10px; flex-wrap:wrap; flex:1; min-width:0; font-size:11px; }
+.cursor-val { display:flex; align-items:center; gap:4px; }
+.cursor-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.cursor-x { font-size:12px; font-weight:700; min-width:80px; }
 
 /* ── SETTINGS TABLE (relay settings) ── */
 .stbl { width:100%; border-collapse:collapse; font-size:11px; }
@@ -200,6 +209,18 @@ body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif;
     </div>
     <div class="chart-area">
       <canvas id="chart"></canvas>
+    </div>
+    <!-- 커서 컨트롤 바 -->
+    <div class="cursor-bar" id="cursorBar" style="display:none;">
+      <span class="cursor-x" id="cursorX">— A</span>
+      <button class="btn secondary sm" onclick="moveCursor(-5)">◀◀</button>
+      <button class="btn secondary sm" onclick="moveCursor(-1)">◀</button>
+      <input id="cursorSlider" type="range" min="0" max="100" value="50"
+        style="flex:0 0 120px;" oninput="onSliderInput(this.value)">
+      <button class="btn secondary sm" onclick="moveCursor(1)">▶</button>
+      <button class="btn secondary sm" onclick="moveCursor(5)">▶▶</button>
+      <button class="btn secondary sm" onclick="toggleCursor()">커서 끄기</button>
+      <div class="cursor-val-list" id="cursorValList"></div>
     </div>
   </div>
 </div>
@@ -370,8 +391,13 @@ let sidebarOpen   = true;
 let allRelays     = [];
 let allModels     = [];
 let allSettings   = [];
-let editingTag    = null;   // relay tag being edited
-let settingTag    = null;   // relay tag for settings modal
+let editingTag    = null;
+let settingTag    = null;
+let cursorOn      = false;
+let cursorX       = null;   // current cursor value in A
+let cursorXMin    = 10;
+let cursorXMax    = 10000;
+let cursorStep    = 0;      // slider position 0~100
 
 // ══ INIT ═════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
@@ -520,6 +546,79 @@ function drawSelected() {
     .catch(e => setStatus('오류: ' + e.message, 'err'));
 }
 
+// ── CURSOR PLUGIN ────────────────────────────────────────────
+const cursorPlugin = {
+  id: 'cursorLine',
+  afterDraw(chart) {
+    if (!cursorOn || cursorX === null) return;
+    const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
+    if (!xScale || !yScale) return;
+
+    const xPx = xScale.getPixelForValue(cursorX);
+    if (xPx < xScale.left || xPx > xScale.right) return;
+
+    const ctx = chart.ctx;
+
+    // 세로선
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(xPx, yScale.top);
+    ctx.lineTo(xPx, yScale.bottom);
+    ctx.strokeStyle = 'rgba(220,38,38,0.8)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 3]);
+    ctx.stroke();
+    ctx.restore();
+
+    // 각 데이터셋 교점 표시
+    chart.data.datasets.forEach((ds, i) => {
+      const t = interpolateLog(ds.data, cursorX);
+      if (t === null) return;
+      const yPx = yScale.getPixelForValue(t);
+      if (yPx < yScale.top || yPx > yScale.bottom) return;
+
+      // 점
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(xPx, yPx, 4, 0, Math.PI * 2);
+      ctx.fillStyle = ds.borderColor;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // 값 레이블 (커서 오른쪽)
+      const labelX = xPx + 7;
+      const labelY = Math.max(yScale.top + 10, Math.min(yScale.bottom - 4, yPx));
+      ctx.save();
+      ctx.font = 'bold 10px Arial';
+      ctx.fillStyle = ds.borderColor;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(t.toFixed(3) + 's', labelX, labelY);
+      ctx.restore();
+    });
+  }
+};
+
+// 로그-로그 보간
+function interpolateLog(data, x) {
+  if (!data || data.length < 2) return null;
+  let p1 = null, p2 = null;
+  for (let i = 0; i < data.length - 1; i++) {
+    if (data[i].x <= x && data[i + 1].x >= x) {
+      p1 = data[i]; p2 = data[i + 1]; break;
+    }
+  }
+  if (!p1 || !p2 || p1.y <= 0 || p2.y <= 0) return null;
+  const lx1 = Math.log(p1.x), ly1 = Math.log(p1.y);
+  const lx2 = Math.log(p2.x), ly2 = Math.log(p2.y);
+  const lx  = Math.log(x);
+  if (lx2 === lx1) return p1.y;
+  return Math.exp(ly1 + (ly2 - ly1) * (lx - lx1) / (lx2 - lx1));
+}
+
 function renderChart(curves, graph) {
   const canvas = document.getElementById('chart');
   const datasets = curves.map(c => ({
@@ -532,14 +631,25 @@ function renderChart(curves, graph) {
     tension        : 0,
   }));
 
+  // 커서 범위 초기화
+  cursorXMin = Number(graph.X_Min) || 10;
+  cursorXMax = Number(graph.X_Max) || 10000;
+  cursorStep = 50;
+  cursorX    = Math.exp(Math.log(cursorXMin) + (Math.log(cursorXMax) - Math.log(cursorXMin)) * 0.5);
+
   if (chartInst) chartInst.destroy();
+  Chart.register(cursorPlugin);
   chartInst = new Chart(canvas, {
     type: 'line',
     data: { datasets },
     options: {
-      animation: false, responsive: true, maintainAspectRatio: false,
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { bottom: 4 } },
       interaction: { mode:'nearest', intersect:false },
       plugins: {
+        cursorLine: {},
         zoom: {
           pan : { enabled:true, mode:'xy' },
           zoom: { wheel:{ enabled:true }, pinch:{ enabled:true }, mode:'xy' },
@@ -548,19 +658,86 @@ function renderChart(curves, graph) {
           callbacks: { label: ctx =>
             `${ctx.dataset.label}: I=${ctx.raw.x.toFixed(1)}A, t=${ctx.raw.y.toFixed(3)}s` }
         },
-        legend: { position:'bottom' }
+        legend: { position:'bottom', labels:{ boxWidth:12, font:{ size:11 } } }
       },
       scales: {
-        x: { type:'logarithmic', min:Number(graph.X_Min), max:Number(graph.X_Max),
-             title:{ display:true, text: graph.refVoltage ? `전류 (A) @ ${graph.refVoltage}kV` : '전류 (A)' } },
-        y: { type:'logarithmic', min:Number(graph.Y_Min), max:Number(graph.Y_Max),
-             title:{ display:true, text:'동작시간 (s)' } }
+        x: {
+          type: 'logarithmic',
+          min: Number(graph.X_Min),
+          max: Number(graph.X_Max),
+          title: { display:true, text: graph.refVoltage ? `전류 (A) @ ${graph.refVoltage}kV` : '전류 (A)' },
+          ticks: { maxRotation:0, autoSkip:true, maxTicksLimit:8 },
+          afterFit(scale) { scale.paddingBottom = 4; }
+        },
+        y: {
+          type: 'logarithmic',
+          min: Number(graph.Y_Min),
+          max: Number(graph.Y_Max),
+          title: { display:true, text:'동작시간 (s)' },
+          ticks: { maxTicksLimit:8 }
+        }
       }
     }
   });
+
+  // 커서 바 표시
+  document.getElementById('cursorBar').style.display = 'flex';
+  document.getElementById('cursorSlider').value = 50;
+  cursorOn = true;
+  updateCursorDisplay();
 }
 
 function resetZoom() { if (chartInst) chartInst.resetZoom(); }
+
+// ── CURSOR CONTROLS ──────────────────────────────────────────
+function moveCursor(steps) {
+  cursorStep = Math.max(0, Math.min(100, cursorStep + steps));
+  document.getElementById('cursorSlider').value = cursorStep;
+  applyCursorStep();
+}
+
+function onSliderInput(val) {
+  cursorStep = Number(val);
+  applyCursorStep();
+}
+
+function applyCursorStep() {
+  const logMin = Math.log(cursorXMin);
+  const logMax = Math.log(cursorXMax);
+  cursorX = Math.exp(logMin + (logMax - logMin) * cursorStep / 100);
+  updateCursorDisplay();
+  if (chartInst) chartInst.draw();
+}
+
+function toggleCursor() {
+  cursorOn = !cursorOn;
+  document.querySelector('#cursorBar button:last-of-type').textContent =
+    cursorOn ? '커서 끄기' : '커서 켜기';
+  if (chartInst) chartInst.draw();
+  updateCursorDisplay();
+}
+
+function updateCursorDisplay() {
+  document.getElementById('cursorX').textContent =
+    cursorOn && cursorX ? cursorX.toFixed(1) + ' A' : '— A';
+
+  const listEl = document.getElementById('cursorValList');
+  if (!cursorOn || !chartInst || cursorX === null) {
+    listEl.innerHTML = '';
+    return;
+  }
+
+  listEl.innerHTML = chartInst.data.datasets.map(ds => {
+    const t = interpolateLog(ds.data, cursorX);
+    const tStr = t !== null ? t.toFixed(3) + ' s' : '—';
+    return `<span class="cursor-val">
+      <span class="cursor-dot" style="background:${ds.borderColor}"></span>
+      <span style="opacity:.65;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+            title="${ds.label}">${ds.label}</span>
+      <strong>${tStr}</strong>
+    </span>`;
+  }).join('');
+}
 
 // ══ RELAY ADD / EDIT MODAL ═══════════════════════════════════
 function openAddRelay() {
